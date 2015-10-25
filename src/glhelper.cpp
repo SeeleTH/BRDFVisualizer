@@ -5,6 +5,16 @@
 #include <sstream>
 #include <assert.h>
 
+GLEWContext* glewGetContext()
+{
+	if (NPGLHelper::App::g_pMainApp)
+	{
+		NPGLHelper::Window* curWin = NPGLHelper::App::g_pMainApp->GetCurrentWindow();
+		return (curWin) ? curWin->GetGLEWContext() : nullptr;
+	}
+	return nullptr;
+}
+
 namespace NPGLHelper
 {
 	bool loadASCIIFromFile(std::string file, std::string &content)
@@ -249,6 +259,16 @@ namespace NPGLHelper
 		glUniform1f(valueLoc, value);
 	}
 
+	Window::Window(const char* name, const int sizeW, const int sizeH)
+	{
+
+	}
+
+	Window::~Window()
+	{
+
+	}
+
 
 	App::App(const int sizeW, const int sizeH)
 		: m_iSizeW(sizeW)
@@ -256,6 +276,8 @@ namespace NPGLHelper
 		, m_pWindow(nullptr)
 		, m_bIsInit(false)
 		, m_fDeltaTime(0.f)
+		, m_uiCurrentWindowID(0)
+		, m_uiCurrentMaxID(0)
 	{
 		g_pMainApp = this;
 	}
@@ -344,6 +366,59 @@ namespace NPGLHelper
 
 		m_bIsInit = true;
 		return 0;
+	}
+
+	bool App::AttachWindow(Window* window)
+	{
+		if (!window)
+			return false;
+
+		unsigned int prevWinId = m_uiCurrentWindowID;
+		window->m_uiID = ++m_uiCurrentMaxID;
+		window->m_pWindow = glfwCreateWindow(window->m_iSizeW, window->m_iSizeH, window->m_sName.c_str(), nullptr, nullptr);
+		if (!window->m_pWindow)
+		{
+			std::cout << "Failed to create GLFW for window " << window->m_sName << std::endl;
+			return false;
+		}
+		window->m_pGLEWContext = new GLEWContext();
+		if (!window->m_pGLEWContext)
+		{
+			std::cout << "Failed to create GLEW Context for window " << window->m_sName << std::endl;
+			return false;
+		}
+		SetCurrentWindow(window->m_uiID);
+
+		glewExperimental = GL_TRUE;
+		if (glewInit() != GLEW_OK)
+		{
+			std::cout << "Failed to initialize GLEW for window " << window->m_sName << std::endl;
+			if (prevWinId > 0)
+				SetCurrentWindow(prevWinId);
+			return false;
+		}
+
+		glViewport(0, 0, window->m_iSizeW, window->m_iSizeH);
+
+		window->m_uiID = ++m_uiCurrentMaxID;
+		m_mapWindows[window->m_uiID] = window;
+
+		if (prevWinId > 0)
+			SetCurrentWindow(prevWinId);
+		return true;
+	}
+
+	void App::SetCurrentWindow(const unsigned int id)
+	{
+		m_uiCurrentWindowID = id;
+		glfwMakeContextCurrent(GetCurrentWindow()->m_pWindow);
+	}
+
+	Window* App::GetCurrentWindow()
+	{
+		if (!m_uiCurrentWindowID)
+			return nullptr;
+		return m_mapWindows[m_uiCurrentWindowID];
 	}
 
 	Effect DebugLine::m_gEffect;

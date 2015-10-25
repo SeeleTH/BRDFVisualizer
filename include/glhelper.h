@@ -13,6 +13,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "geohelper.h"
 
@@ -72,22 +73,27 @@ namespace NPGLHelper
 	class Window
 	{
 	public:
+		friend class App;
 		Window(const char* name, const int sizeW = 800, const int sizeH = 600);
 		~Window();
 
-		virtual int Init() = 0;
-		virtual int Tick(const float deltaTime) = 0;
-		virtual void Terminate() = 0;
+		virtual int OnInit() = 0;
+		virtual int OnTick(const float deltaTime) = 0;
+		virtual void OnTerminate() = 0;
 
 		virtual void KeyCallback(int key, int scancode, int action, int mode){}
 		virtual void MouseKeyCallback(int key, int action, int mode){}
 		virtual void MouseCursorCallback(double xpos, double ypos){}
 
+		inline GLEWContext* GetGLEWContext() { return m_pGLEWContext; }
+
 	protected:
 		bool m_bIsInit;
+		std::string m_sName;
 		int m_iSizeW, m_iSizeH;
 		GLFWwindow* m_pWindow;
 		GLEWContext* m_pGLEWContext;
+		unsigned int m_uiID;
 	};
 
 	class App
@@ -108,6 +114,10 @@ namespace NPGLHelper
 
 		inline const float GetDeltaTime() { return m_fDeltaTime; }
 
+		bool AttachWindow(Window* window);
+		void SetCurrentWindow(const unsigned int id);
+		Window* GetCurrentWindow();
+
 	protected:
 		virtual int Init()=0;
 		virtual int Tick()=0;
@@ -118,6 +128,10 @@ namespace NPGLHelper
 		bool m_bIsInit;
 		int m_iSizeW, m_iSizeH;
 		GLFWwindow* m_pWindow;
+
+		std::map<unsigned int, Window*> m_mapWindows;
+		unsigned int m_uiCurrentWindowID;
+		unsigned int m_uiCurrentMaxID;
 
 	private:
 		float m_fDeltaTime;
