@@ -135,6 +135,7 @@
     <ClInclude Include="..\include\geohelper.h" />
     <ClInclude Include="..\include\glhelper.h" />
     <ClInclude Include="..\include\mathhelper.h" />
+    <ClInclude Include="..\include\templatehelper.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\shader\debugLinePS.glsl" />
