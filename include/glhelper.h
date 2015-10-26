@@ -171,6 +171,7 @@ namespace NPGLHelper
 		static void GlobalKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 		static void GlobalMouseKeyCallback(GLFWwindow *window, int key, int action, int mode);
 		static void GlobalMouseCursorCallback(GLFWwindow* window, double xpos, double ypos);
+		static void GlobalMouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 		inline const float GetDeltaTime() { return m_fDeltaTime; }
 

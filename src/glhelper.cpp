@@ -386,6 +386,11 @@ namespace NPGLHelper
 			g_pMainApp->MouseCursorCallback(window, xpos, ypos);
 	}
 
+	void App::GlobalMouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+	{
+		std::cout << "Scrolled " << xoffset << ", " << yoffset << std::endl;
+	}
+
 	int App::GLInit()
 	{
 		if (m_bIsInit || m_pWindow)
@@ -479,6 +484,7 @@ namespace NPGLHelper
 		glfwSetKeyCallback(window->m_pWindow, GlobalKeyCallback);
 		glfwSetMouseButtonCallback(window->m_pWindow, GlobalMouseKeyCallback);
 		glfwSetCursorPosCallback(window->m_pWindow, GlobalMouseCursorCallback);
+		glfwSetScrollCallback(window->m_pWindow, GlobalMouseScrollCallback);
 
 		glewExperimental = GL_TRUE;
 		if (glewInit() != GLEW_OK)

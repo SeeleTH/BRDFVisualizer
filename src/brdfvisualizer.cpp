@@ -112,6 +112,8 @@ int BRDFVisualizer::OnInit()
 	testObject.SetGeometry(NPGeoHelper::GetSlicedHemisphereShape(1.f, 64, 64));
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+	glCullFace(GL_FRONT);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	return 0;
