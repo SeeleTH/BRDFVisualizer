@@ -56,13 +56,13 @@ BRDFVisualizer::~BRDFVisualizer()
 {
 }
 
-void BRDFVisualizer::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
+void BRDFVisualizer::KeyCallback(int key, int scancode, int action, int mode)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, GL_TRUE);
+		glfwSetWindowShouldClose(m_pWindow, GL_TRUE);
 }
 
-void BRDFVisualizer::MouseKeyCallback(GLFWwindow* window, int key, int action, int mode)
+void BRDFVisualizer::MouseKeyCallback(int key, int action, int mode)
 {
 	if (key == GLFW_MOUSE_BUTTON_RIGHT)
 	{
@@ -74,7 +74,7 @@ void BRDFVisualizer::MouseKeyCallback(GLFWwindow* window, int key, int action, i
 	}
 }
 
-void BRDFVisualizer::MouseCursorCallback(GLFWwindow* window, double xpos, double ypos)
+void BRDFVisualizer::MouseCursorCallback(double xpos, double ypos)
 {
 	m_v2CurrentCursorPos.x = xpos;
 	m_v2CurrentCursorPos.y = ypos;

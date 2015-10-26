@@ -15,9 +15,9 @@ public:
 	virtual int OnTick(const float deltaTime);
 	virtual void OnTerminate();
 
-	virtual void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
-	virtual void MouseKeyCallback(GLFWwindow* window, int key, int action, int mode);
-	virtual void MouseCursorCallback(GLFWwindow* window, double xpos, double ypos);
+	virtual void KeyCallback(int key, int scancode, int action, int mode);
+	virtual void MouseKeyCallback(int key, int action, int mode);
+	virtual void MouseCursorCallback(double xpos, double ypos);
 
 protected:
 	GLuint m_iBRDFEstTex;

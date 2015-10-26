@@ -319,6 +319,42 @@ namespace NPGLHelper
 		m_bForceShutdown = true;
 	}
 
+	void App::KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
+	{
+		for (auto& mapWin : m_mapWindows)
+		{
+			if (mapWin.second->GetGLFWWindow() == window)
+			{
+				mapWin.second->KeyCallback(key, scancode, action, mode);
+				break;
+			}
+		}
+	}
+
+	void App::MouseKeyCallback(GLFWwindow* window, int key, int action, int mode)
+	{
+		for (auto& mapWin : m_mapWindows)
+		{
+			if (mapWin.second->GetGLFWWindow() == window)
+			{
+				mapWin.second->MouseKeyCallback(key, action, mode);
+				break;
+			}
+		}
+	}
+
+	void App::MouseCursorCallback(GLFWwindow* window, double xpos, double ypos)
+	{
+		for (auto& mapWin : m_mapWindows)
+		{
+			if (mapWin.second->GetGLFWWindow() == window)
+			{
+				mapWin.second->MouseCursorCallback(xpos, ypos);
+				break;
+			}
+		}
+	}
+
 	App* App::g_pMainApp = nullptr;
 	void App::GlobalKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode)
 	{

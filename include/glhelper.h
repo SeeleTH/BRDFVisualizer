@@ -105,9 +105,9 @@ namespace NPGLHelper
 
 		int Run(Window* initWindow);
 		void Shutdown();
-		virtual void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode){}
-		virtual void MouseKeyCallback(GLFWwindow* window, int key, int action, int mode){}
-		virtual void MouseCursorCallback(GLFWwindow* window, double xpos, double ypos){}
+		virtual void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
+		virtual void MouseKeyCallback(GLFWwindow* window, int key, int action, int mode);
+		virtual void MouseCursorCallback(GLFWwindow* window, double xpos, double ypos);
 
 		static App* g_pMainApp;
 		static void GlobalKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
