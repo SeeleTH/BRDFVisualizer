@@ -5,21 +5,21 @@
 #include "camhelper.h"
 #include "mathhelper.h"
 
-class BRDFVisualizer : public NPGLHelper::App
+class BRDFVisualizer : public NPGLHelper::Window
 {
 public:
-	BRDFVisualizer(const int sizeW = 800, const int sizeH = 600);
+	BRDFVisualizer(const char* name, const int sizeW = 800, const int sizeH = 600);
 	~BRDFVisualizer();
+
+	virtual int OnInit();
+	virtual int OnTick(const float deltaTime);
+	virtual void OnTerminate();
 
 	virtual void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 	virtual void MouseKeyCallback(GLFWwindow* window, int key, int action, int mode);
 	virtual void MouseCursorCallback(GLFWwindow* window, double xpos, double ypos);
 
 protected:
-	virtual int Init();
-	virtual int Tick();
-	virtual void Terminate();
-
 	GLuint m_iBRDFEstTex;
 	GLuint VAO;
 	NPGLHelper::Effect testEffect;

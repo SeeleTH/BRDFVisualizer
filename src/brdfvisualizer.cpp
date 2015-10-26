@@ -32,13 +32,14 @@ int main()
 	//// Now simpley display the file name 
 	//MessageBox(NULL, ofn.lpstrFile, "File Name", MB_OK);
 
-	BRDFVisualizer mainApp(800,600);
-	return mainApp.Run();
+	BRDFVisualizer* mainWin = new BRDFVisualizer("BRDFVisualizer", 800, 600);
+	NPGLHelper::App mainApp;
+	return mainApp.Run(mainWin);
 }
 
 
-BRDFVisualizer::BRDFVisualizer(const int sizeW, const int sizeH)
-	: App(sizeW, sizeH)
+BRDFVisualizer::BRDFVisualizer(const char* name, const int sizeW, const int sizeH)
+	: Window(name, sizeW, sizeH)
 	, m_Cam(1.f, 0.f, M_PI * 0.25f)
 	, m_fCamSenX(10.f)
 	, m_fCamSenY(5.f)
@@ -79,7 +80,7 @@ void BRDFVisualizer::MouseCursorCallback(GLFWwindow* window, double xpos, double
 	m_v2CurrentCursorPos.y = ypos;
 }
 
-int BRDFVisualizer::Init()
+int BRDFVisualizer::OnInit()
 {
 	m_AxisLine[0].Init();
 	m_AxisLine[1].Init();
@@ -112,19 +113,19 @@ int BRDFVisualizer::Init()
 	return 0;
 }
 
-int BRDFVisualizer::Tick()
+int BRDFVisualizer::OnTick(const float deltaTime)
 {
 	// Camera control - bgn
 	glm::vec2 cursorMoved = m_v2CurrentCursorPos - m_v2LastCursorPos;
 	if (m_bIsCamRotate)
 	{
-		m_Cam.AddPitch(-cursorMoved.x * m_fCamSenX * GetDeltaTime());
-		m_Cam.AddYaw(cursorMoved.y * m_fCamSenY * GetDeltaTime());
+		m_Cam.AddPitch(-cursorMoved.x * m_fCamSenX * deltaTime);
+		m_Cam.AddYaw(cursorMoved.y * m_fCamSenY * deltaTime);
 	}
 	if (m_bIsInRotate)
 	{
-		m_fInPitch = m_fInPitch + cursorMoved.x * m_fInSenX * GetDeltaTime();
-		m_fInYaw = (m_fInYaw - cursorMoved.y * m_fInSenY * GetDeltaTime());
+		m_fInPitch = m_fInPitch + cursorMoved.x * m_fInSenX * deltaTime;
+		m_fInYaw = (m_fInYaw - cursorMoved.y * m_fInSenY * deltaTime);
 		if (m_fInYaw < 0) m_fInYaw = 0.f;
 		if (m_fInYaw > M_PI * 0.5f) m_fInYaw = M_PI * 0.5f;
 		while (m_fInPitch < 0) m_fInPitch = m_fInPitch + M_PI * 2.f;
@@ -186,7 +187,7 @@ int BRDFVisualizer::Tick()
 	return 0;
 }
 
-void BRDFVisualizer::Terminate()
+void BRDFVisualizer::OnTerminate()
 {
 	testObject.ClearGeometry();
 }

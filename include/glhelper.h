@@ -86,6 +86,7 @@ namespace NPGLHelper
 		virtual void MouseCursorCallback(double xpos, double ypos){}
 
 		inline GLEWContext* GetGLEWContext() { return m_pGLEWContext; }
+		inline GLFWwindow* GetGLFWWindow() { return m_pWindow; }
 
 	protected:
 		bool m_bIsInit;
@@ -102,7 +103,8 @@ namespace NPGLHelper
 		App(const int sizeW = 800, const int sizeH = 600);
 		~App();
 
-		int Run();
+		int Run(Window* initWindow);
+		void Shutdown();
 		virtual void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode){}
 		virtual void MouseKeyCallback(GLFWwindow* window, int key, int action, int mode){}
 		virtual void MouseCursorCallback(GLFWwindow* window, double xpos, double ypos){}
@@ -119,11 +121,8 @@ namespace NPGLHelper
 		Window* GetCurrentWindow();
 
 	protected:
-		virtual int Init()=0;
-		virtual int Tick()=0;
-		virtual void Terminate()=0;
-
 		int GLInit();
+		bool WindowsUpdate();
 
 		bool m_bIsInit;
 		int m_iSizeW, m_iSizeH;
@@ -132,6 +131,7 @@ namespace NPGLHelper
 		std::map<unsigned int, Window*> m_mapWindows;
 		unsigned int m_uiCurrentWindowID;
 		unsigned int m_uiCurrentMaxID;
+		bool m_bForceShutdown;
 
 	private:
 		float m_fDeltaTime;

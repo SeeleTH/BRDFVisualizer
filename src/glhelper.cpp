@@ -278,6 +278,7 @@ namespace NPGLHelper
 		, m_fDeltaTime(0.f)
 		, m_uiCurrentWindowID(0)
 		, m_uiCurrentMaxID(0)
+		, m_bForceShutdown(false)
 	{
 		g_pMainApp = this;
 	}
@@ -287,28 +288,35 @@ namespace NPGLHelper
 		g_pMainApp = NULL;
 	}
 
-	int App::Run()
+	int App::Run(Window* initWindow)
 	{
 		if (GLInit() < 0)
 			return -1;
-		if (Init() < 0)
-			return -1;
+		AttachWindow(initWindow);
 
-		while (!glfwWindowShouldClose(m_pWindow))
+		while (!WindowsUpdate())
 		{
 			glfwPollEvents();
 			float currentTime = glfwGetTime();
+
 			if (m_fLastTime > 0.f)
 				m_fDeltaTime = currentTime - m_fLastTime;
-			if (Tick() < 0)
-				break;
+
+			for (auto it = m_mapWindows.begin(); it != m_mapWindows.end(); it++)
+			{
+				it->second->OnTick(GetDeltaTime());
+				glfwSwapBuffers(it->second->GetGLFWWindow());
+			}
+
 			m_fLastTime = currentTime;
-			glfwSwapBuffers(m_pWindow);
 		}
-		Terminate();
 		glfwTerminate();
 		return 0;
+	}
 
+	void App::Shutdown()
+	{
+		m_bForceShutdown = true;
 	}
 
 	App* App::g_pMainApp = nullptr;
@@ -340,32 +348,45 @@ namespace NPGLHelper
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-#ifdef __APPLE__
-		glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-		m_pWindow = glfwCreateWindow(m_iSizeW, m_iSizeH, "BRDF Visualizer", nullptr, nullptr);
-		if (m_pWindow == nullptr)
-		{
-			std::cout << "Failed to create GLFW window" << std::endl;
-			glfwTerminate();
-			return -1;
-		}
-		glfwMakeContextCurrent(m_pWindow);
-		glfwSetKeyCallback(m_pWindow, GlobalKeyCallback);
-		glfwSetMouseButtonCallback(m_pWindow, GlobalMouseKeyCallback);
-		glfwSetCursorPosCallback(m_pWindow, GlobalMouseCursorCallback);
-
-		glewExperimental = GL_TRUE;
-		if (glewInit() != GLEW_OK)
-		{
-			std::cout << "Failed to initialize GLEW" << std::endl;
-			return -1;
-		}
-
-		glViewport(0, 0, m_iSizeW, m_iSizeH);
 
 		m_bIsInit = true;
 		return 0;
+	}
+
+	bool App::WindowsUpdate()
+	{
+		std::vector<unsigned int> removeList;
+		for (auto it = m_mapWindows.begin(); it != m_mapWindows.end(); it++)
+		{
+			if (glfwWindowShouldClose(it->second->GetGLFWWindow()) || m_bForceShutdown)
+			{
+				it->second->OnTerminate();
+				if (it->second->GetGLEWContext())
+				{
+					delete it->second->m_pGLEWContext;
+					it->second->m_pGLEWContext = NULL;
+				}
+				if (it->second->GetGLFWWindow())
+				{
+					glfwDestroyWindow(it->second->GetGLFWWindow());
+					delete it->second->m_pWindow;
+					it->second->m_pWindow = NULL;
+				}
+				if (it->second)
+				{
+					delete it->second;
+					it->second = NULL;
+				}
+				removeList.push_back(it->first);
+			}
+		}
+
+		for (auto it = removeList.begin(); it != removeList.end(); it++)
+		{
+			m_mapWindows.erase(*it);
+		}
+
+		return (m_mapWindows.size() > 0);
 	}
 
 	bool App::AttachWindow(Window* window)
@@ -389,6 +410,10 @@ namespace NPGLHelper
 		}
 		SetCurrentWindow(window->m_uiID);
 
+		glfwSetKeyCallback(window->m_pWindow, GlobalKeyCallback);
+		glfwSetMouseButtonCallback(window->m_pWindow, GlobalMouseKeyCallback);
+		glfwSetCursorPosCallback(window->m_pWindow, GlobalMouseCursorCallback);
+
 		glewExperimental = GL_TRUE;
 		if (glewInit() != GLEW_OK)
 		{
@@ -402,6 +427,8 @@ namespace NPGLHelper
 
 		window->m_uiID = ++m_uiCurrentMaxID;
 		m_mapWindows[window->m_uiID] = window;
+
+		window->OnInit();
 
 		if (prevWinId > 0)
 			SetCurrentWindow(prevWinId);
