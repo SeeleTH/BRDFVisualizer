@@ -70,12 +70,61 @@ namespace NPGLHelper
 		std::vector<GLuint> m_vAttachedShader;
 	};
 
+	class ShareContent
+	{
+	public:
+		ShareContent()
+			:m_uiRefCount(1)
+		{}
+		virtual ~ShareContent()
+		{
+			for (auto& effect : m_mapEffects)
+			{
+				delete effect.second;
+			}
+			m_mapEffects.clear();
+		}
+
+		inline Effect* GetEffect(const char* name)
+		{ 
+			Effect* storedEffect = m_mapEffects[name];
+			if (!storedEffect)
+				m_mapEffects[name] = new Effect();
+			return m_mapEffects[name];
+		}
+
+		inline void RemoveEffect(const char* name)
+		{
+			Effect* storedEffect = m_mapEffects[name];
+			if (storedEffect)
+			{
+				delete storedEffect;
+				storedEffect = nullptr;
+				m_mapEffects.erase(name);
+			}
+		}
+
+		inline unsigned int DeRef()
+		{
+			return --m_uiRefCount;
+		}
+
+		inline int AddRef()
+		{
+			return ++m_uiRefCount;
+		}
+
+	protected:
+		std::map<std::string, Effect*> m_mapEffects;
+		unsigned int m_uiRefCount;
+	};
+
 	class Window
 	{
 	public:
 		friend class App;
 		Window(const char* name, const int sizeW = 800, const int sizeH = 600);
-		~Window();
+		virtual ~Window();
 
 		virtual int OnInit() = 0;
 		virtual int OnTick(const float deltaTime) = 0;
@@ -87,6 +136,13 @@ namespace NPGLHelper
 
 		inline GLEWContext* GetGLEWContext() { return m_pGLEWContext; }
 		inline GLFWwindow* GetGLFWWindow() { return m_pWindow; }
+		inline ShareContent* GetShareContent() { return m_pShareContent; }
+		inline void ShareContentWithOther(Window* other)
+		{
+			if (m_pShareContent)
+				delete m_pShareContent;
+			m_pShareContent = other->m_pShareContent;
+		}
 
 	protected:
 		bool m_bIsInit;
@@ -95,13 +151,15 @@ namespace NPGLHelper
 		GLFWwindow* m_pWindow;
 		GLEWContext* m_pGLEWContext;
 		unsigned int m_uiID;
+
+		ShareContent* m_pShareContent;
 	};
 
 	class App
 	{
 	public:
 		App(const int sizeW = 800, const int sizeH = 600);
-		~App();
+		virtual ~App();
 
 		int Run(Window* initWindow);
 		void Shutdown();
@@ -116,8 +174,8 @@ namespace NPGLHelper
 
 		inline const float GetDeltaTime() { return m_fDeltaTime; }
 
-		bool AttachWindow(Window* window);
-		void SetCurrentWindow(const unsigned int id);
+		bool AttachWindow(Window* window, Window* sharedGLWindow = nullptr);
+		bool SetCurrentWindow(const unsigned int id);
 		Window* GetCurrentWindow();
 
 	protected:
@@ -144,7 +202,7 @@ namespace NPGLHelper
 	public:
 		DebugLine();
 		~DebugLine();
-		void Init();
+		void Init(ShareContent* content);
 		void Draw(const NPGeoHelper::vec3& start, const NPGeoHelper::vec3& end, const NPGeoHelper::vec3& color
 			, const float* viewMat, const float* projMat);
 	protected:
@@ -153,7 +211,7 @@ namespace NPGLHelper
 		NPGeoHelper::vec3 m_v3Start;
 		NPGeoHelper::vec3 m_v3End;
 		NPGeoHelper::vec3 m_v3Color;
-		static Effect m_gEffect;
+		Effect* m_pEffect;
 
 		GLuint m_iVAO;
 		GLuint m_iVBO;

@@ -9,7 +9,7 @@ class BRDFVisualizer : public NPGLHelper::Window
 {
 public:
 	BRDFVisualizer(const char* name, const int sizeW = 800, const int sizeH = 600);
-	~BRDFVisualizer();
+	virtual ~BRDFVisualizer();
 
 	virtual int OnInit();
 	virtual int OnTick(const float deltaTime);
@@ -22,7 +22,7 @@ public:
 protected:
 	GLuint m_iBRDFEstTex;
 	GLuint VAO;
-	NPGLHelper::Effect testEffect;
+	NPGLHelper::Effect* m_pBRDFVisEffect;
 	NPGLHelper::RenderObject testObject;
 	NPCamHelper::RotateCamera m_Cam;
 

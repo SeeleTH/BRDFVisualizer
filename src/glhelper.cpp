@@ -260,13 +260,24 @@ namespace NPGLHelper
 	}
 
 	Window::Window(const char* name, const int sizeW, const int sizeH)
+		: m_sName(name)
+		, m_iSizeW(sizeW)
+		, m_iSizeH(sizeH)
+		, m_bIsInit(false)
+		, m_pWindow(NULL)
+		, m_pGLEWContext(NULL)
+		, m_uiID(0)
 	{
 
 	}
 
 	Window::~Window()
 	{
-
+		if (m_pShareContent && m_pShareContent->DeRef() <= 0)
+		{
+			delete m_pShareContent;
+			m_pShareContent = 0;
+		}
 	}
 
 
@@ -294,7 +305,7 @@ namespace NPGLHelper
 			return -1;
 		AttachWindow(initWindow);
 
-		while (!WindowsUpdate())
+		while (WindowsUpdate())
 		{
 			glfwPollEvents();
 			float currentTime = glfwGetTime();
@@ -304,6 +315,7 @@ namespace NPGLHelper
 
 			for (auto it = m_mapWindows.begin(); it != m_mapWindows.end(); it++)
 			{
+				SetCurrentWindow(it->first);
 				it->second->OnTick(GetDeltaTime());
 				glfwSwapBuffers(it->second->GetGLFWWindow());
 			}
@@ -396,52 +408,70 @@ namespace NPGLHelper
 		{
 			if (glfwWindowShouldClose(it->second->GetGLFWWindow()) || m_bForceShutdown)
 			{
-				it->second->OnTerminate();
-				if (it->second->GetGLEWContext())
-				{
-					delete it->second->m_pGLEWContext;
-					it->second->m_pGLEWContext = NULL;
-				}
-				if (it->second->GetGLFWWindow())
-				{
-					glfwDestroyWindow(it->second->GetGLFWWindow());
-					delete it->second->m_pWindow;
-					it->second->m_pWindow = NULL;
-				}
-				if (it->second)
-				{
-					delete it->second;
-					it->second = NULL;
-				}
 				removeList.push_back(it->first);
 			}
 		}
 
 		for (auto it = removeList.begin(); it != removeList.end(); it++)
 		{
+			Window* closeWin = m_mapWindows[*it];
+			SetCurrentWindow(*it);
+			closeWin->OnTerminate();
+			GLEWContext* glewCont = closeWin->GetGLEWContext();
+			GLFWwindow* glfwWin = closeWin->GetGLFWWindow();
+			if (closeWin)
+			{
+				delete closeWin;
+				closeWin = NULL;
+			}
+			if (glewCont)
+			{
+				delete glewCont;
+				glewCont = NULL;
+			}
+			if (glfwWin)
+			{
+				glfwDestroyWindow(glfwWin);
+				glfwWin = NULL;
+			}
 			m_mapWindows.erase(*it);
 		}
 
 		return (m_mapWindows.size() > 0);
 	}
 
-	bool App::AttachWindow(Window* window)
+	bool App::AttachWindow(Window* window, Window* sharedGLWindow)
 	{
 		if (!window)
 			return false;
 
 		unsigned int prevWinId = m_uiCurrentWindowID;
 		window->m_uiID = ++m_uiCurrentMaxID;
-		window->m_pWindow = glfwCreateWindow(window->m_iSizeW, window->m_iSizeH, window->m_sName.c_str(), nullptr, nullptr);
+		window->m_pWindow = glfwCreateWindow(window->m_iSizeW, window->m_iSizeH, window->m_sName.c_str(), nullptr
+			, (sharedGLWindow) ? sharedGLWindow->GetGLFWWindow() : nullptr);
+		if (sharedGLWindow)
+		{
+			window->ShareContentWithOther(sharedGLWindow);
+			window->GetShareContent()->AddRef();
+		}
+		else
+		{
+			window->m_pShareContent = new ShareContent();
+		}
+		window->m_uiID = ++m_uiCurrentMaxID;
+		m_mapWindows[window->m_uiID] = window;
+
 		if (!window->m_pWindow)
 		{
 			std::cout << "Failed to create GLFW for window " << window->m_sName << std::endl;
+			m_mapWindows.erase(window->m_uiID);
 			return false;
 		}
 		window->m_pGLEWContext = new GLEWContext();
 		if (!window->m_pGLEWContext)
 		{
 			std::cout << "Failed to create GLEW Context for window " << window->m_sName << std::endl;
+			m_mapWindows.erase(window->m_uiID);
 			return false;
 		}
 		SetCurrentWindow(window->m_uiID);
@@ -456,13 +486,11 @@ namespace NPGLHelper
 			std::cout << "Failed to initialize GLEW for window " << window->m_sName << std::endl;
 			if (prevWinId > 0)
 				SetCurrentWindow(prevWinId);
+			m_mapWindows.erase(window->m_uiID);
 			return false;
 		}
 
 		glViewport(0, 0, window->m_iSizeW, window->m_iSizeH);
-
-		window->m_uiID = ++m_uiCurrentMaxID;
-		m_mapWindows[window->m_uiID] = window;
 
 		window->OnInit();
 
@@ -471,10 +499,13 @@ namespace NPGLHelper
 		return true;
 	}
 
-	void App::SetCurrentWindow(const unsigned int id)
+	bool App::SetCurrentWindow(const unsigned int id)
 	{
 		m_uiCurrentWindowID = id;
-		glfwMakeContextCurrent(GetCurrentWindow()->m_pWindow);
+		Window* curWin = GetCurrentWindow();
+		if (curWin)
+			glfwMakeContextCurrent(GetCurrentWindow()->m_pWindow);
+		return curWin != nullptr;
 	}
 
 	Window* App::GetCurrentWindow()
@@ -484,14 +515,13 @@ namespace NPGLHelper
 		return m_mapWindows[m_uiCurrentWindowID];
 	}
 
-	Effect DebugLine::m_gEffect;
-
 	DebugLine::DebugLine()
 		: m_v3Start()
 		, m_v3End()
 		, m_v3Color(1.f,0.f,0.f)
 		, m_iVAO(-1)
 		, m_iVBO(-1)
+		, m_pEffect(nullptr)
 	{
 
 	}
@@ -501,14 +531,15 @@ namespace NPGLHelper
 
 	}
 
-	void DebugLine::Init()
+	void DebugLine::Init(ShareContent* content)
 	{
-		if (!m_gEffect.GetIsLinked())
+		m_pEffect = content->GetEffect("DebugLineEffect");
+		if (!m_pEffect->GetIsLinked())
 		{
-			m_gEffect.initEffect();
-			m_gEffect.attachShaderFromFile("../shader/debugLineVS.glsl", GL_VERTEX_SHADER);
-			m_gEffect.attachShaderFromFile("../shader/debugLinePS.glsl", GL_FRAGMENT_SHADER);
-			m_gEffect.linkEffect();
+			m_pEffect->initEffect();
+			m_pEffect->attachShaderFromFile("../shader/debugLineVS.glsl", GL_VERTEX_SHADER);
+			m_pEffect->attachShaderFromFile("../shader/debugLinePS.glsl", GL_FRAGMENT_SHADER);
+			m_pEffect->linkEffect();
 		}
 
 		UpdateBuffer();
@@ -537,15 +568,15 @@ namespace NPGLHelper
 		if (m_v3Start == m_v3End)
 			return;
 
-		m_gEffect.activeEffect();
-		m_gEffect.SetMatrix("projection", projMat);
-		m_gEffect.SetMatrix("view", viewMat);
+		m_pEffect->activeEffect();
+		m_pEffect->SetMatrix("projection", projMat);
+		m_pEffect->SetMatrix("view", viewMat);
 
 		glBindVertexArray(m_iVAO);
 		glDrawArrays(GL_LINE_STRIP, 0, 2);
 		glBindVertexArray(0);
 
-		m_gEffect.deactiveEffect();
+		m_pEffect->deactiveEffect();
 	}
 
 	void DebugLine::UpdateBuffer()

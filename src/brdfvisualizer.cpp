@@ -32,9 +32,8 @@ int main()
 	//// Now simpley display the file name 
 	//MessageBox(NULL, ofn.lpstrFile, "File Name", MB_OK);
 
-	BRDFVisualizer* mainWin = new BRDFVisualizer("BRDFVisualizer", 800, 600);
 	NPGLHelper::App mainApp;
-	return mainApp.Run(mainWin);
+	return mainApp.Run(new BRDFVisualizer("BRDF Visualizer", 800, 600));
 }
 
 
@@ -49,6 +48,7 @@ BRDFVisualizer::BRDFVisualizer(const char* name, const int sizeW, const int size
 	, m_fInYaw(M_PI*0.25f)
 	, m_bIsCamRotate(false)
 	, m_bIsInRotate(false)
+	, m_pBRDFVisEffect(nullptr)
 {
 }
 
@@ -82,15 +82,19 @@ void BRDFVisualizer::MouseCursorCallback(double xpos, double ypos)
 
 int BRDFVisualizer::OnInit()
 {
-	m_AxisLine[0].Init();
-	m_AxisLine[1].Init();
-	m_AxisLine[2].Init();
-	m_InLine.Init();
+	m_AxisLine[0].Init(m_pShareContent);
+	m_AxisLine[1].Init(m_pShareContent);
+	m_AxisLine[2].Init(m_pShareContent);
+	m_InLine.Init(m_pShareContent);
 
-	testEffect.initEffect();
-	testEffect.attachShaderFromFile("../shader/SimpleVS.glsl", GL_VERTEX_SHADER);
-	testEffect.attachShaderFromFile("../shader/SimplePS.glsl", GL_FRAGMENT_SHADER);
-	testEffect.linkEffect();
+	m_pBRDFVisEffect = m_pShareContent->GetEffect("BRDFVisEffect");
+	if (!m_pBRDFVisEffect->GetIsLinked())
+	{
+		m_pBRDFVisEffect->initEffect();
+		m_pBRDFVisEffect->attachShaderFromFile("../shader/SimpleVS.glsl", GL_VERTEX_SHADER);
+		m_pBRDFVisEffect->attachShaderFromFile("../shader/SimplePS.glsl", GL_FRAGMENT_SHADER);
+		m_pBRDFVisEffect->linkEffect();
+	}
 
 	int width, height;
 	unsigned char* image = SOIL_load_image("brdfest.bmp", &width, &height, 0, SOIL_LOAD_RGB);
@@ -130,7 +134,6 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 		if (m_fInYaw > M_PI * 0.5f) m_fInYaw = M_PI * 0.5f;
 		while (m_fInPitch < 0) m_fInPitch = m_fInPitch + M_PI * 2.f;
 		while (m_fInPitch > M_PI * 2.f) m_fInPitch -= M_PI * 2.f;
-		std::cout << "InYaw " << m_fInYaw << ", InPitch " << m_fInPitch << std::endl;
 	}
 	m_v2LastCursorPos = m_v2CurrentCursorPos;
 	// Camera control - end
@@ -144,23 +147,23 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	testEffect.activeEffect();
-	testEffect.SetInt("n_th", 16);
-	testEffect.SetInt("n_ph", 64);
-	testEffect.SetFloat("i_yaw", m_fInYaw);
-	testEffect.SetFloat("i_pitch", m_fInPitch);
-	testEffect.SetMatrix("projection", myProj.GetDataColumnMajor());
-	//testEffect.SetMatrix("projection", glm::value_ptr(proj));
-	testEffect.SetMatrix("view", m_Cam.GetViewMatrix());
-	//testEffect.SetMatrix("view", glm::value_ptr(view));
-	testEffect.SetMatrix("model", glm::value_ptr(model));
+	m_pBRDFVisEffect->activeEffect();
+	m_pBRDFVisEffect->SetInt("n_th", 16);
+	m_pBRDFVisEffect->SetInt("n_ph", 64);
+	m_pBRDFVisEffect->SetFloat("i_yaw", m_fInYaw);
+	m_pBRDFVisEffect->SetFloat("i_pitch", m_fInPitch);
+	m_pBRDFVisEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+	//m_pBRDFVisEffect->SetMatrix("projection", glm::value_ptr(proj));
+	m_pBRDFVisEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+	//m_pBRDFVisEffect->SetMatrix("view", glm::value_ptr(view));
+	m_pBRDFVisEffect->SetMatrix("model", glm::value_ptr(model));
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-	testEffect.SetInt("brdfTexture", 0);
+	m_pBRDFVisEffect->SetInt("brdfTexture", 0);
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-	testEffect.SetInt("dTexture", 1);
+	m_pBRDFVisEffect->SetInt("dTexture", 1);
 
 	glBindVertexArray(testObject.GetVAO());
 	glDrawElements(GL_TRIANGLES, testObject.GetIndicesSize(), GL_UNSIGNED_INT, 0);
