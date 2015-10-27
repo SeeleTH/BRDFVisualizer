@@ -13,6 +13,7 @@
 
 #include <string>
 #include <vector>
+#include <queue>
 #include <map>
 
 #include "geohelper.h"
@@ -122,6 +123,44 @@ namespace NPGLHelper
 	class Window
 	{
 	public:
+		enum INPUTMSG_TYPE
+		{
+			INPUTMSG_KEYBOARDKEY,
+			INPUTMSG_MOUSEKEY,
+			INPUTMSG_MOUSECURSOR,
+			INPUTMSG_MOUSESCROLL
+		};
+		enum INPUTMSG_ACTION
+		{
+			PRESS,
+			RELEASE
+		};
+		struct INPUTMSG
+		{
+			INPUTMSG_TYPE type;
+			float timestamp;
+			union
+			{
+				struct
+				{
+					int key;
+					int scancode;
+					int action;
+					int mode;
+				};
+				struct
+				{
+					double xpos;
+					double ypos;
+				};
+				struct
+				{
+					double xoffset;
+					double yoffset;
+				};
+			};
+		};
+
 		friend class App;
 		Window(const char* name, const int sizeW = 800, const int sizeH = 600);
 		virtual ~Window();
@@ -129,10 +168,10 @@ namespace NPGLHelper
 		virtual int OnInit() = 0;
 		virtual int OnTick(const float deltaTime) = 0;
 		virtual void OnTerminate() = 0;
+		virtual void OnHandleInputMSG(const INPUTMSG &msg) = 0;
 
-		virtual void KeyCallback(int key, int scancode, int action, int mode){}
-		virtual void MouseKeyCallback(int key, int action, int mode){}
-		virtual void MouseCursorCallback(double xpos, double ypos){}
+		void AddInputMSG(INPUTMSG msg);
+		void ProcessInputMSGQueue();
 
 		inline GLEWContext* GetGLEWContext() { return m_pGLEWContext; }
 		inline GLFWwindow* GetGLFWWindow() { return m_pWindow; }
@@ -153,6 +192,7 @@ namespace NPGLHelper
 		unsigned int m_uiID;
 
 		ShareContent* m_pShareContent;
+		std::queue<INPUTMSG> m_queueInputMSG;
 	};
 
 	class App
@@ -166,6 +206,7 @@ namespace NPGLHelper
 		virtual void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 		virtual void MouseKeyCallback(GLFWwindow* window, int key, int action, int mode);
 		virtual void MouseCursorCallback(GLFWwindow* window, double xpos, double ypos);
+		virtual void MouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 
 		static App* g_pMainApp;
 		static void GlobalKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);

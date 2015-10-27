@@ -128,6 +128,7 @@
     <ClCompile Include="..\src\geohelper.cpp" />
     <ClCompile Include="..\src\glhelper.cpp" />
     <ClCompile Include="..\src\mathelper.cpp" />
+    <ClCompile Include="..\src\oshelper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\brdfvisualizer.h" />
@@ -135,6 +136,7 @@
     <ClInclude Include="..\include\geohelper.h" />
     <ClInclude Include="..\include\glhelper.h" />
     <ClInclude Include="..\include\mathhelper.h" />
+    <ClInclude Include="..\include\oshelper.h" />
     <ClInclude Include="..\include\templatehelper.h" />
   </ItemGroup>
   <ItemGroup>

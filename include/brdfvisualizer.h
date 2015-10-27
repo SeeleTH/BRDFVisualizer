@@ -14,14 +14,13 @@ public:
 	virtual int OnInit();
 	virtual int OnTick(const float deltaTime);
 	virtual void OnTerminate();
+	virtual void OnHandleInputMSG(const INPUTMSG &msg);
 
-	virtual void KeyCallback(int key, int scancode, int action, int mode);
-	virtual void MouseKeyCallback(int key, int action, int mode);
-	virtual void MouseCursorCallback(double xpos, double ypos);
+	void OpenBRDFData();
 
 protected:
 	GLuint m_iBRDFEstTex;
-	GLuint VAO;
+	bool m_bIsLoadTexture;
 	NPGLHelper::Effect* m_pBRDFVisEffect;
 	NPGLHelper::RenderObject testObject;
 	NPCamHelper::RotateCamera m_Cam;
@@ -30,6 +29,8 @@ protected:
 	float m_fCamSenX, m_fCamSenY;
 	float m_fInSenX, m_fInSenY;
 	float m_fInPitch, m_fInYaw;
+	float m_fZoomSen, m_fScrollY;
+	float m_fZoomMin, m_fZoomMax;
 	glm::vec2 m_v2LastCursorPos;
 	glm::vec2 m_v2CurrentCursorPos;
 	NPGLHelper::DebugLine m_InLine;

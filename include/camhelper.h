@@ -53,6 +53,12 @@ namespace NPCamHelper
 			m_bIsViewMatDirty = true;
 		}
 
+		inline void SetRadius(const float radius)
+		{
+			m_fRadius = radius;
+			m_bIsViewMatDirty = true;
+		}
+
 		inline void AddYaw(const float addYaw)
 		{
 			m_fYaw += addYaw;
@@ -65,8 +71,15 @@ namespace NPCamHelper
 			m_bIsViewMatDirty = true;
 		}
 
+		inline void AddRadius(const float addRadius)
+		{
+			m_fRadius += addRadius;
+			m_bIsViewMatDirty = true;
+		}
+
 		inline const float GetYaw() { return m_fYaw; }
 		inline const float GetPitch() { return m_fPitch; }
+		inline const float GetRadius() { return m_fRadius; }
 
 		virtual void UpdateViewMatrix()
 		{

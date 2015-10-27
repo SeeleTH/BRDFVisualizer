@@ -280,6 +280,20 @@ namespace NPGLHelper
 		}
 	}
 
+	void Window::AddInputMSG(INPUTMSG msg)
+	{
+		m_queueInputMSG.push(msg);
+	}
+
+	void Window::ProcessInputMSGQueue()
+	{
+		while (!m_queueInputMSG.empty())
+		{
+			INPUTMSG msg = m_queueInputMSG.front();
+			m_queueInputMSG.pop();
+			OnHandleInputMSG(msg);
+		}
+	}
 
 	App::App(const int sizeW, const int sizeH)
 		: m_iSizeW(sizeW)
@@ -316,8 +330,8 @@ namespace NPGLHelper
 			for (auto it = m_mapWindows.begin(); it != m_mapWindows.end(); it++)
 			{
 				SetCurrentWindow(it->first);
+				it->second->ProcessInputMSGQueue();
 				it->second->OnTick(GetDeltaTime());
-				glfwSwapBuffers(it->second->GetGLFWWindow());
 			}
 
 			m_fLastTime = currentTime;
@@ -337,7 +351,14 @@ namespace NPGLHelper
 		{
 			if (mapWin.second->GetGLFWWindow() == window)
 			{
-				mapWin.second->KeyCallback(key, scancode, action, mode);
+				Window::INPUTMSG msg;
+				msg.type = Window::INPUTMSG_KEYBOARDKEY;
+				msg.key = key;
+				msg.scancode = scancode;
+				msg.action = action;
+				msg.mode = mode;
+				msg.timestamp = glfwGetTime();
+				mapWin.second->AddInputMSG(msg);
 				break;
 			}
 		}
@@ -349,7 +370,13 @@ namespace NPGLHelper
 		{
 			if (mapWin.second->GetGLFWWindow() == window)
 			{
-				mapWin.second->MouseKeyCallback(key, action, mode);
+				Window::INPUTMSG msg;
+				msg.type = Window::INPUTMSG_MOUSEKEY;
+				msg.key = key;
+				msg.action = action;
+				msg.mode = mode;
+				msg.timestamp = glfwGetTime();
+				mapWin.second->AddInputMSG(msg);
 				break;
 			}
 		}
@@ -361,7 +388,29 @@ namespace NPGLHelper
 		{
 			if (mapWin.second->GetGLFWWindow() == window)
 			{
-				mapWin.second->MouseCursorCallback(xpos, ypos);
+				Window::INPUTMSG msg;
+				msg.type = Window::INPUTMSG_MOUSECURSOR;
+				msg.xpos = xpos;
+				msg.ypos = ypos;
+				msg.timestamp = glfwGetTime();
+				mapWin.second->AddInputMSG(msg);
+				break;
+			}
+		}
+	}
+
+	void App::MouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
+	{
+		for (auto& mapWin : m_mapWindows)
+		{
+			if (mapWin.second->GetGLFWWindow() == window)
+			{
+				Window::INPUTMSG msg;
+				msg.type = Window::INPUTMSG_MOUSESCROLL;
+				msg.xoffset = xoffset;
+				msg.yoffset = yoffset;
+				msg.timestamp = glfwGetTime();
+				mapWin.second->AddInputMSG(msg);
 				break;
 			}
 		}
@@ -388,7 +437,9 @@ namespace NPGLHelper
 
 	void App::GlobalMouseScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 	{
-		std::cout << "Scrolled " << xoffset << ", " << yoffset << std::endl;
+		if (g_pMainApp)
+			g_pMainApp->MouseScrollCallback(window, xoffset, yoffset);
+		//std::cout << "Scrolled " << xoffset << ", " << yoffset << std::endl;
 	}
 
 	int App::GLInit()

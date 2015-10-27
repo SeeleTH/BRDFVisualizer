@@ -54,7 +54,7 @@ vec3 FetchBRDF(int i_th, int i_ph, int o_th, int o_ph)
 	ivec2 fTarget;
 	fTarget.x = i_th * n_ph + i_ph;
 	fTarget.y = (n_ph * n_th - 1) -( o_th * n_ph + o_ph);
-	return texelFetch(brdfTexture, fTarget, 0);
+	return texelFetch(brdfTexture, fTarget, 0).xyz;
 }
 
 vec3 OutFourPointsSample(ivec2 i_vec, vec2 o_vec)
