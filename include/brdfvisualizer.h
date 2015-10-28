@@ -17,6 +17,7 @@ public:
 	virtual void OnHandleInputMSG(const INPUTMSG &msg);
 
 	void OpenBRDFData();
+	void OpenModelWindow();
 
 protected:
 	GLuint m_iBRDFEstTex;
@@ -35,6 +36,8 @@ protected:
 	glm::vec2 m_v2CurrentCursorPos;
 	NPGLHelper::DebugLine m_InLine;
 	NPGLHelper::DebugLine m_AxisLine[3];
+
+	unsigned int m_uiModelWindowID;
 };
 
 #endif

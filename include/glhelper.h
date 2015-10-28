@@ -120,6 +120,7 @@ namespace NPGLHelper
 		unsigned int m_uiRefCount;
 	};
 
+	class App;
 	class Window
 	{
 	public:
@@ -183,6 +184,9 @@ namespace NPGLHelper
 			m_pShareContent = other->m_pShareContent;
 		}
 
+		inline void SetOwner(App* owner) { m_pOwnerApp = owner; }
+		inline App* GetOwner() { return m_pOwnerApp; }
+
 	protected:
 		bool m_bIsInit;
 		std::string m_sName;
@@ -193,6 +197,8 @@ namespace NPGLHelper
 
 		ShareContent* m_pShareContent;
 		std::queue<INPUTMSG> m_queueInputMSG;
+
+		App* m_pOwnerApp;
 	};
 
 	class App
@@ -216,9 +222,11 @@ namespace NPGLHelper
 
 		inline const float GetDeltaTime() { return m_fDeltaTime; }
 
-		bool AttachWindow(Window* window, Window* sharedGLWindow = nullptr);
+		unsigned int AttachWindow(Window* window, Window* sharedGLWindow = nullptr);
 		bool SetCurrentWindow(const unsigned int id);
 		Window* GetCurrentWindow();
+		inline Window* GetWindow(const unsigned int id) { return (GetIsWindowActive(id)) ? m_mapWindows[id] : nullptr; }
+		inline bool GetIsWindowActive(const unsigned int id) { return (m_mapWindows.find(id) != m_mapWindows.end()); }
 
 	protected:
 		int GLInit();

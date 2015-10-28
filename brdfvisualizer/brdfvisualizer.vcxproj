@@ -66,12 +66,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)3rdparty\glfw\include;$(SolutionDir)3rdparty\glew\include;$(SolutionDir)3rdparty\glm\include;$(SolutionDir)3rdparty\soil\include;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)3rdparty\glfw\lib\$(Configuration)\$(Platform);$(SolutionDir)3rdparty\glew\lib\$(Configuration)\$(Platform);$(SolutionDir)3rdparty\soil\lib\$(Configuration)\$(Platform);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)3rdparty\glfw\include;$(SolutionDir)3rdparty\glew\include;$(SolutionDir)3rdparty\glm\include;$(SolutionDir)3rdparty\soil\include;$(SolutionDir)3rdparty\assimp\include;$(SolutionDir)include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)3rdparty\glfw\lib\$(Configuration)\$(Platform);$(SolutionDir)3rdparty\glew\lib\$(Configuration)\$(Platform);$(SolutionDir)3rdparty\assimp\lib\$(Configuration)\$(Platform);$(SolutionDir)3rdparty\soil\lib\$(Configuration)\$(Platform);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)3rdparty\glfw\include;$(SolutionDir)3rdparty\glew\include;$(SolutionDir)3rdparty\glm\include;$(SolutionDir)3rdparty\soil\include;$(SolutionDir)include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)3rdparty\glfw\lib\$(Configuration)\$(Platform);$(SolutionDir)3rdparty\glew\lib\$(Configuration)\$(Platform);$(SolutionDir)3rdparty\soil\lib\$(Configuration)\$(Platform);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)3rdparty\glfw\include;$(SolutionDir)3rdparty\glew\include;$(SolutionDir)3rdparty\glm\include;$(SolutionDir)3rdparty\soil\include;$(SolutionDir)3rdparty\assimp\include;$(SolutionDir)include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)3rdparty\glfw\lib\$(Configuration)\$(Platform);$(SolutionDir)3rdparty\glew\lib\$(Configuration)\$(Platform);$(SolutionDir)3rdparty\soil\lib\$(Configuration)\$(Platform);$(SolutionDir)3rdparty\assimp\lib\$(Configuration)\$(Platform);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -91,8 +91,11 @@
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;glew32mxs.lib;SOIL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;glew32mxs.lib;SOIL.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(SolutionDir)3rdParty\assimp\lib\$(Configuration)\$(Platform)\assimp.dll" "$(TargetDir)assimp.dll"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -120,14 +123,18 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;glew32mxs.lib;SOIL.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;glew32mxs.lib;SOIL.lib;assimp.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(SolutionDir)3rdParty\assimp\lib\$(Configuration)\$(Platform)\assimp.dll" "$(TargetDir)assimp.dll"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\src\brdfvisualizer.cpp" />
     <ClCompile Include="..\src\geohelper.cpp" />
     <ClCompile Include="..\src\glhelper.cpp" />
     <ClCompile Include="..\src\mathelper.cpp" />
+    <ClCompile Include="..\src\ModelViewWinfow.cpp" />
     <ClCompile Include="..\src\oshelper.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -135,15 +142,17 @@
     <ClInclude Include="..\include\camhelper.h" />
     <ClInclude Include="..\include\geohelper.h" />
     <ClInclude Include="..\include\glhelper.h" />
+    <ClInclude Include="..\include\macrohelper.h" />
     <ClInclude Include="..\include\mathhelper.h" />
+    <ClInclude Include="..\include\ModelViewWindow.h" />
     <ClInclude Include="..\include\oshelper.h" />
     <ClInclude Include="..\include\templatehelper.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\shader\debugLinePS.glsl" />
     <None Include="..\shader\debugLineVS.glsl" />
-    <None Include="..\shader\SImplePS.glsl" />
-    <None Include="..\shader\SimpleVS.glsl" />
+    <None Include="..\shader\BRDFVisualizePS.glsl" />
+    <None Include="..\shader\BRDFVisualizeVS.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

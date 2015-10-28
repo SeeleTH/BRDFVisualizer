@@ -7,6 +7,8 @@
 #include "geohelper.h"
 #include "oshelper.h"
 
+#include "ModelViewWindow.h"
+
 
 int main()
 {
@@ -18,19 +20,20 @@ int main()
 BRDFVisualizer::BRDFVisualizer(const char* name, const int sizeW, const int sizeH)
 	: Window(name, sizeW, sizeH)
 	, m_Cam(1.f, 0.f, M_PI * 0.25f)
-	, m_fCamSenX(10.f)
-	, m_fCamSenY(5.0f)
-	, m_fInSenX(1.f)
-	, m_fInSenY(0.5f)
+	, m_fCamSenX(0.01f)
+	, m_fCamSenY(.005f)
+	, m_fInSenX(.001f)
+	, m_fInSenY(0.0005f)
 	, m_fInPitch(0.f)
 	, m_fInYaw(M_PI*0.25f)
 	, m_bIsCamRotate(false)
 	, m_bIsInRotate(false)
 	, m_fZoomMin(0.25f)
 	, m_fZoomMax(4.0f)
-	, m_fZoomSen(20.f)
+	, m_fZoomSen(0.1f)
 	, m_pBRDFVisEffect(nullptr)
 	, m_bIsLoadTexture(false)
+	, m_uiModelWindowID(0)
 {
 }
 
@@ -49,23 +52,10 @@ int BRDFVisualizer::OnInit()
 	if (!m_pBRDFVisEffect->GetIsLinked())
 	{
 		m_pBRDFVisEffect->initEffect();
-		m_pBRDFVisEffect->attachShaderFromFile("../shader/SimpleVS.glsl", GL_VERTEX_SHADER);
-		m_pBRDFVisEffect->attachShaderFromFile("../shader/SimplePS.glsl", GL_FRAGMENT_SHADER);
+		m_pBRDFVisEffect->attachShaderFromFile("../shader/BRDFVisualizeVS.glsl", GL_VERTEX_SHADER);
+		m_pBRDFVisEffect->attachShaderFromFile("../shader/BRDFVisualizePS.glsl", GL_FRAGMENT_SHADER);
 		m_pBRDFVisEffect->linkEffect();
 	}
-
-	//int width, height;
-	//unsigned char* image = SOIL_load_image("brdfest.bmp", &width, &height, 0, SOIL_LOAD_RGB);
-	//glGenTextures(1, &m_iBRDFEstTex);
-	//glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-	//glGenerateMipmap(GL_TEXTURE_2D);
-	//SOIL_free_image_data(image);
-	//glBindTexture(GL_TEXTURE_2D, 0);
 
 	testObject.SetGeometry(NPGeoHelper::GetSlicedHemisphereShape(1.f, 64, 64));
 
@@ -73,6 +63,8 @@ int BRDFVisualizer::OnInit()
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+	OpenBRDFData();
 
 	return 0;
 }
@@ -83,13 +75,13 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 	glm::vec2 cursorMoved = m_v2CurrentCursorPos - m_v2LastCursorPos;
 	if (m_bIsCamRotate)
 	{
-		m_Cam.AddPitch(-cursorMoved.x * m_fCamSenX * deltaTime);
-		m_Cam.AddYaw(cursorMoved.y * m_fCamSenY * deltaTime);
+		m_Cam.AddPitch(-cursorMoved.x * m_fCamSenX);
+		m_Cam.AddYaw(cursorMoved.y * m_fCamSenY);
 	}
 	if (m_bIsInRotate)
 	{
-		m_fInPitch = m_fInPitch + cursorMoved.x * m_fInSenX * deltaTime;
-		m_fInYaw = (m_fInYaw - cursorMoved.y * m_fInSenY * deltaTime);
+		m_fInPitch = m_fInPitch + cursorMoved.x * m_fInSenX;
+		m_fInYaw = (m_fInYaw - cursorMoved.y * m_fInSenY);
 		if (m_fInYaw < 0) m_fInYaw = 0.f;
 		if (m_fInYaw > M_PI * 0.5f) m_fInYaw = M_PI * 0.5f;
 		while (m_fInPitch < 0) m_fInPitch = m_fInPitch + M_PI * 2.f;
@@ -98,7 +90,7 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 	if (abs(m_fScrollY) > 1E-9)
 	{
 		float curZoom = m_Cam.GetRadius();
-		curZoom += m_fScrollY * m_fZoomSen * deltaTime;
+		curZoom += m_fScrollY * m_fZoomSen;
 		curZoom = (curZoom < m_fZoomMin) ? m_fZoomMin : (curZoom > m_fZoomMax) ? m_fZoomMax : curZoom;
 		m_Cam.SetRadius(curZoom);
 		m_fScrollY = 0.f;
@@ -177,6 +169,8 @@ void BRDFVisualizer::OnHandleInputMSG(const INPUTMSG &msg)
 			glfwSetWindowShouldClose(m_pWindow, GL_TRUE);
 		if (msg.key == GLFW_KEY_O && msg.action == GLFW_PRESS)
 			OpenBRDFData();
+		if (msg.key == GLFW_KEY_M && msg.action == GLFW_PRESS)
+			OpenModelWindow();
 		break;
 	case Window::INPUTMSG_MOUSEKEY:
 		if (msg.key == GLFW_MOUSE_BUTTON_RIGHT)
@@ -226,4 +220,18 @@ void BRDFVisualizer::OpenBRDFData()
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	m_bIsLoadTexture = true;
+}
+
+void BRDFVisualizer::OpenModelWindow()
+{
+	if (!(m_uiModelWindowID > 0 && GetOwner() && GetOwner()->GetIsWindowActive(m_uiModelWindowID)))
+	{
+		m_uiModelWindowID = GetOwner()->AttachWindow(new ModelViewWindow("Model View", 800, 600));
+	}
+
+	ModelViewWindow* modelViewWindow = (ModelViewWindow*)GetOwner()->GetWindow(m_uiModelWindowID);
+	if (modelViewWindow)
+	{
+
+	}
 }

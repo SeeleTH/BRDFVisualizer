@@ -1,4 +1,5 @@
 #include "glhelper.h"
+#include "macrohelper.h"
 
 #include <iostream>
 #include <fstream>
@@ -45,12 +46,12 @@ namespace NPGLHelper
 			std::string info;
 			if (!checkShaderError(shader, GL_COMPILE_STATUS,info))
 			{
-				std::cout << "[!!!]SHADER::COMPILATION_FAILED " << file << std::endl << info << std::endl;
+				DEBUG_COUT("[!!!]SHADER::COMPILATION_FAILED " << file << std::endl << info);
 				return false;
 			}
 			else
 			{
-				std::cout << "SHADER:COMPILATION_SUCCEED " << file << std::endl;
+				DEBUG_COUT("SHADER:COMPILATION_SUCCEED " << file);
 			}
 			return true;
 		}
@@ -211,12 +212,12 @@ namespace NPGLHelper
 		std::string pLinkInfo;
 		if (!NPGLHelper::checkProgramError(m_iProgram, GL_LINK_STATUS, pLinkInfo))
 		{
-			std::cout << "[!!!]SHADER::LINK_FAILED" << std::endl << pLinkInfo << std::endl;
+			DEBUG_COUT("[!!!]SHADER::LINK_FAILED" << std::endl << pLinkInfo);
 			return false;
 		}
 		else
 		{
-			std::cout << "SHADER::LINK_SUCCEED" << std::endl;
+			DEBUG_COUT("SHADER::LINK_SUCCEED");
 		}
 
 		m_bIsLinked = true;
@@ -267,6 +268,7 @@ namespace NPGLHelper
 		, m_pWindow(NULL)
 		, m_pGLEWContext(NULL)
 		, m_uiID(0)
+		, m_pOwnerApp(NULL)
 	{
 
 	}
@@ -496,13 +498,12 @@ namespace NPGLHelper
 		return (m_mapWindows.size() > 0);
 	}
 
-	bool App::AttachWindow(Window* window, Window* sharedGLWindow)
+	unsigned int App::AttachWindow(Window* window, Window* sharedGLWindow)
 	{
 		if (!window)
-			return false;
+			return 0;
 
 		unsigned int prevWinId = m_uiCurrentWindowID;
-		window->m_uiID = ++m_uiCurrentMaxID;
 		window->m_pWindow = glfwCreateWindow(window->m_iSizeW, window->m_iSizeH, window->m_sName.c_str(), nullptr
 			, (sharedGLWindow) ? sharedGLWindow->GetGLFWWindow() : nullptr);
 		if (sharedGLWindow)
@@ -521,14 +522,16 @@ namespace NPGLHelper
 		{
 			std::cout << "Failed to create GLFW for window " << window->m_sName << std::endl;
 			m_mapWindows.erase(window->m_uiID);
-			return false;
+			m_uiCurrentMaxID--;
+			return 0;
 		}
 		window->m_pGLEWContext = new GLEWContext();
 		if (!window->m_pGLEWContext)
 		{
 			std::cout << "Failed to create GLEW Context for window " << window->m_sName << std::endl;
 			m_mapWindows.erase(window->m_uiID);
-			return false;
+			m_uiCurrentMaxID--;
+			return 0;
 		}
 		SetCurrentWindow(window->m_uiID);
 
@@ -544,16 +547,17 @@ namespace NPGLHelper
 			if (prevWinId > 0)
 				SetCurrentWindow(prevWinId);
 			m_mapWindows.erase(window->m_uiID);
-			return false;
+			m_uiCurrentMaxID--;
+			return 0;
 		}
 
 		glViewport(0, 0, window->m_iSizeW, window->m_iSizeH);
-
+		window->SetOwner(this);
 		window->OnInit();
 
 		if (prevWinId > 0)
 			SetCurrentWindow(prevWinId);
-		return true;
+		return window->m_uiID;
 	}
 
 	bool App::SetCurrentWindow(const unsigned int id)
