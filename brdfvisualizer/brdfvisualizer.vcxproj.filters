@@ -65,6 +65,9 @@
     <ClInclude Include="..\include\ModelViewWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="meshhelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\shader\debugLinePS.glsl">

@@ -7,6 +7,158 @@
 #include "geohelper.h"
 #include "oshelper.h"
 
+namespace BRDFModel
+{
+	void Mesh::Draw(NPGLHelper::Effect &effect)
+	{
+		unsigned int diffuseNr = 1;
+		unsigned int specularNr = 1;
+		for (unsigned int i = 0; i < m_textures.size(); i++)
+		{
+			glActiveTexture(GL_TEXTURE0 + i);
+			effect.SetInt("", i);
+			glBindTexture(GL_TEXTURE_2D, m_textures[i].id);
+		}
+	}
+
+	void Mesh::SetupMesh()
+	{
+		glGenVertexArrays(1, &m_iVAO);
+		glGenBuffers(1, &m_iVBO);
+		glGenBuffers(1, &m_iEBO);
+
+		glBindVertexArray(m_iVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, m_iVBO);
+		glBufferData(GL_ARRAY_BUFFER, m_vertices.size() * sizeof(Vertex), m_vertices.data(), GL_STATIC_DRAW);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_iEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_indices.size() * sizeof(GLuint), m_indices.data(), GL_STATIC_DRAW);
+
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, normal));
+		glEnableVertexAttribArray(2);
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, tangent));
+		glEnableVertexAttribArray(3);
+		glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (GLvoid*)offsetof(Vertex, texCoords));
+
+		glBindVertexArray(0);
+
+	}
+
+
+	Model::Model()
+	{
+
+	}
+
+	void Model::Draw(NPGLHelper::Effect &effect)
+	{
+		for (auto &mesh : m_meshes)
+		{
+			mesh.Draw(effect);
+		}
+	}
+
+	bool Model::LoadModel(const char* path)
+	{
+		Assimp::Importer importer;
+		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+		if (!scene || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
+		{
+			NPOSHelper::CreateMessageBox("Cannot load model.", "Model loading", NPOSHelper::MSGBOX_OK);
+			return false;
+		}
+		std::string sPath = path;
+		m_sDirectory = sPath.substr(0, sPath.find_last_of('/'));
+		ProcessNode(scene->mRootNode, scene);
+
+		return true;
+	}
+
+	void Model::ProcessNode(aiNode* node, const aiScene* scene)
+	{
+		for (unsigned int i = 0; i < node->mNumMeshes; i++)
+		{
+			Mesh loadedMesh = ProcessMesh(scene->mMeshes[node->mMeshes[i]], scene);
+			m_meshes.push_back(loadedMesh);
+		}
+
+		for (unsigned int i = 0; i < node->mNumChildren; i++)
+		{
+			ProcessNode(node->mChildren[i], scene);
+		}
+	}
+
+	Mesh Model::ProcessMesh(aiMesh* mesh, const aiScene* scene)
+	{
+		std::vector<Vertex> vertices;
+		std::vector<GLuint> indices;
+		std::vector<Texture> textures;
+
+		for (unsigned int i = 0; i < mesh->mNumVertices; i++)
+		{
+			Vertex vertex;
+			vertex.position._x = mesh->mVertices[i].x;
+			vertex.position._y = mesh->mVertices[i].y;
+			vertex.position._z = mesh->mVertices[i].z;
+			vertex.normal._x = mesh->mNormals[i].x;
+			vertex.normal._y = mesh->mNormals[i].y;
+			vertex.normal._z = mesh->mNormals[i].z;
+			vertex.tangent._x = mesh->mTangents[i].x;
+			vertex.tangent._y = mesh->mTangents[i].y;
+			vertex.tangent._z = mesh->mTangents[i].z;
+			if (mesh->mTextureCoords[0])
+			{
+				vertex.texCoords._x = mesh->mTextureCoords[0][i].x;
+				vertex.texCoords._y = mesh->mTextureCoords[0][i].y;
+			}
+			vertices.push_back(vertex);
+		}
+
+		for (unsigned int i = 0; i < mesh->mNumFaces; i++)
+		{
+			aiFace face = mesh->mFaces[i];
+			for (unsigned int j = 0; j < face.mNumIndices; j++)
+			{
+				indices.push_back(face.mIndices[j]);
+			}
+		}
+
+		if (mesh->mMaterialIndex >= 0)
+		{
+			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+			std::vector<Texture> diffuseMaps = LoadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
+			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
+			std::vector<Texture> specularMaps = LoadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
+			textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+			
+		}
+
+		return Mesh(vertices, indices, textures);
+
+	}
+
+	std::vector<Texture> Model::LoadMaterialTextures(aiMaterial* mat, aiTextureType type, const char* typeName)
+	{
+		std::vector<Texture> textures;
+		for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+		{
+			aiString str;
+			mat->GetTexture(type, i, &str);
+			Texture texture;
+			std::string fullpath = m_sDirectory + str.C_Str();
+			if (NPGLHelper::loadTextureFromFile(fullpath.c_str(), texture.id, GL_CLAMP, GL_CLAMP, GL_LINEAR, GL_LINEAR))
+			{
+				texture.name = typeName;
+				textures.push_back(texture);
+			}
+		}
+
+		return textures;
+	}
+}
+
 ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int sizeH)
 	: Window(name, sizeW, sizeH)
 	, m_Cam(1.f, 0.f, M_PI * 0.25f)

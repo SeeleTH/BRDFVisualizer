@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <string>
-#include <SOIL.h>
 
 #include "geohelper.h"
 #include "oshelper.h"
@@ -199,25 +198,13 @@ void BRDFVisualizer::OpenBRDFData()
 		return;
 
 	int width, height;
-	unsigned char* image = SOIL_load_image(file.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
-	if (!image)
+	if (!NPGLHelper::loadTextureFromFile(file.c_str(), m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST))
 	{
 		std::string message = "Cannot load file ";
 		message = message + file;
 		NPOSHelper::CreateMessageBox(message.c_str(), "Load BRDF Data Failure", NPOSHelper::MSGBOX_OK);
 		return;
 	}
-
-	glGenTextures(1, &m_iBRDFEstTex);
-	glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	SOIL_free_image_data(image);
-	glBindTexture(GL_TEXTURE_2D, 0);
 
 	m_bIsLoadTexture = true;
 }

@@ -147,6 +147,7 @@
     <ClInclude Include="..\include\ModelViewWindow.h" />
     <ClInclude Include="..\include\oshelper.h" />
     <ClInclude Include="..\include\templatehelper.h" />
+    <ClInclude Include="meshhelper.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\shader\debugLinePS.glsl" />

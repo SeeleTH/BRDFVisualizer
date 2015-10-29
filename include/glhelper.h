@@ -17,6 +17,7 @@
 #include <map>
 
 #include "geohelper.h"
+#include "mathhelper.h"
 
 GLEWContext* glewGetContext();
 
@@ -27,6 +28,8 @@ namespace NPGLHelper
 
 	bool checkShaderError(GLuint shader, GLuint checking, std::string &info);
 	bool checkProgramError(GLuint program, GLuint checking, std::string &info);
+
+	bool loadTextureFromFile(const char* path, GLuint &id, GLint warpS, GLint warpT, GLint minFil, GLint maxFil);
 
 
 	class RenderObject

@@ -6,6 +6,8 @@
 #include <sstream>
 #include <assert.h>
 
+#include <SOIL.h>
+
 GLEWContext* glewGetContext()
 {
 	if (NPGLHelper::App::g_pMainApp)
@@ -82,6 +84,28 @@ namespace NPGLHelper
 			info = infoLog;
 		}
 		return success != 0;
+	}
+
+	bool loadTextureFromFile(const char* path, GLuint &id, GLint warpS, GLint warpT, GLint minFil, GLint maxFil)
+	{
+		int width, height;
+		unsigned char* image = SOIL_load_image(path, &width, &height, 0, SOIL_LOAD_RGB);
+		if (!image)
+		{
+			return false;
+		}
+
+		glGenTextures(1, &id);
+		glBindTexture(GL_TEXTURE_2D, id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		SOIL_free_image_data(image);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		return true;
 	}
 
 	RenderObject::RenderObject()
