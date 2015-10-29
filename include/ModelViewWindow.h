@@ -21,6 +21,7 @@ namespace BRDFModel
 	struct Texture {
 		GLuint id;
 		std::string name;
+		unsigned int type;
 	};
 
 	class Mesh {
@@ -33,7 +34,9 @@ namespace BRDFModel
 			: m_vertices(vertices)
 			, m_indices(indices)
 			, m_textures(textures)
-		{}
+		{
+			SetupMesh();
+		}
 
 		void Draw(NPGLHelper::Effect &effect);
 
@@ -55,7 +58,7 @@ namespace BRDFModel
 	protected:
 		void ProcessNode(aiNode* node, const aiScene* scene);
 		Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene);
-		std::vector<Texture> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, const char* typeName);
+		std::vector<Texture> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, const char* name, const unsigned int typeId);
 
 		std::vector<Mesh> m_meshes;
 		std::string m_sDirectory;
@@ -74,9 +77,11 @@ public:
 	virtual void OnHandleInputMSG(const INPUTMSG &msg);
 
 	void OpenModelData();
+	void SetBRDFData(const char* path);
 
 protected:
 	GLuint m_iBRDFEstTex;
+	BRDFModel::Model* m_pModel;
 	bool m_bIsLoadTexture;
 	NPGLHelper::Effect* m_pBRDFVisEffect;
 	NPGLHelper::RenderObject testObject;

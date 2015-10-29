@@ -16,9 +16,21 @@ namespace BRDFModel
 		for (unsigned int i = 0; i < m_textures.size(); i++)
 		{
 			glActiveTexture(GL_TEXTURE0 + i);
-			effect.SetInt("", i);
+			std::string texName = m_textures[i].name;
+			if (m_textures[i].type == 0)
+			{
+				texName += diffuseNr++;
+			}
+			else
+			{
+				texName += specularNr++;
+			}
+			effect.SetInt(texName.c_str(), i);
 			glBindTexture(GL_TEXTURE_2D, m_textures[i].id);
 		}
+		glBindVertexArray(m_iVAO);
+		glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
 	}
 
 	void Mesh::SetupMesh()
@@ -63,14 +75,15 @@ namespace BRDFModel
 	bool Model::LoadModel(const char* path)
 	{
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs | aiProcess_CalcTangentSpace);
+		std::string sPath = path;
+		const aiScene* scene = importer.ReadFile(sPath.c_str(), aiProcess_Triangulate | aiProcess_FlipUVs 
+			| aiProcess_CalcTangentSpace | aiProcess_GenNormals);
 		if (!scene || scene->mFlags == AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 		{
 			NPOSHelper::CreateMessageBox("Cannot load model.", "Model loading", NPOSHelper::MSGBOX_OK);
 			return false;
 		}
-		std::string sPath = path;
-		m_sDirectory = sPath.substr(0, sPath.find_last_of('/'));
+		m_sDirectory = sPath.substr(0, sPath.find_last_of('\\'));
 		ProcessNode(scene->mRootNode, scene);
 
 		return true;
@@ -128,9 +141,9 @@ namespace BRDFModel
 		if (mesh->mMaterialIndex >= 0)
 		{
 			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-			std::vector<Texture> diffuseMaps = LoadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse");
+			std::vector<Texture> diffuseMaps = LoadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", 0);
 			textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
-			std::vector<Texture> specularMaps = LoadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular");
+			std::vector<Texture> specularMaps = LoadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular", 1);
 			textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 			
 		}
@@ -139,7 +152,7 @@ namespace BRDFModel
 
 	}
 
-	std::vector<Texture> Model::LoadMaterialTextures(aiMaterial* mat, aiTextureType type, const char* typeName)
+	std::vector<Texture> Model::LoadMaterialTextures(aiMaterial* mat, aiTextureType type, const char* name, const unsigned int typeId)
 	{
 		std::vector<Texture> textures;
 		for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
@@ -150,7 +163,8 @@ namespace BRDFModel
 			std::string fullpath = m_sDirectory + str.C_Str();
 			if (NPGLHelper::loadTextureFromFile(fullpath.c_str(), texture.id, GL_CLAMP, GL_CLAMP, GL_LINEAR, GL_LINEAR))
 			{
-				texture.name = typeName;
+				texture.name = name;
+				texture.type = typeId;
 				textures.push_back(texture);
 			}
 		}
@@ -171,10 +185,11 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_bIsCamRotate(false)
 	, m_bIsInRotate(false)
 	, m_fZoomMin(0.25f)
-	, m_fZoomMax(4.0f)
+	, m_fZoomMax(20.0f)
 	, m_fZoomSen(0.1f)
 	, m_pBRDFVisEffect(nullptr)
 	, m_bIsLoadTexture(false)
+	, m_pModel(nullptr)
 {
 }
 
@@ -189,20 +204,18 @@ int ModelViewWindow::OnInit()
 	m_AxisLine[2].Init(m_pShareContent);
 	m_InLine.Init(m_pShareContent);
 
-	m_pBRDFVisEffect = m_pShareContent->GetEffect("BRDFVisEffect");
+	m_pBRDFVisEffect = m_pShareContent->GetEffect("BRDFModelEffect");
 	if (!m_pBRDFVisEffect->GetIsLinked())
 	{
 		m_pBRDFVisEffect->initEffect();
-		m_pBRDFVisEffect->attachShaderFromFile("../shader/BRDFVisualizeVS.glsl", GL_VERTEX_SHADER);
-		m_pBRDFVisEffect->attachShaderFromFile("../shader/BRDFVisualizePS.glsl", GL_FRAGMENT_SHADER);
+		m_pBRDFVisEffect->attachShaderFromFile("../shader/BRDFModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBRDFVisEffect->attachShaderFromFile("../shader/BRDFModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pBRDFVisEffect->linkEffect();
 	}
 
-	testObject.SetGeometry(NPGeoHelper::GetSlicedHemisphereShape(1.f, 64, 64));
-
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
+	glCullFace(GL_BACK);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	OpenModelData();
@@ -239,38 +252,27 @@ int ModelViewWindow::OnTick(const float deltaTime)
 	m_v2LastCursorPos = m_v2CurrentCursorPos;
 	// Camera control - end
 
-	glm::mat4 proj, view, model;
+	glm::mat4 proj, view, model, tranInvModel;
 	proj = glm::perspective(45.0f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
 	view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 	model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+	tranInvModel = glm::transpose(glm::inverse(model));
 	NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::PerspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (m_bIsLoadTexture)
+	if (/*m_bIsLoadTexture &&*/ m_pModel)
 	{
 		m_pBRDFVisEffect->activeEffect();
-		m_pBRDFVisEffect->SetInt("n_th", 16);
-		m_pBRDFVisEffect->SetInt("n_ph", 64);
-		m_pBRDFVisEffect->SetFloat("i_yaw", m_fInYaw);
-		m_pBRDFVisEffect->SetFloat("i_pitch", m_fInPitch);
 		m_pBRDFVisEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
 		//m_pBRDFVisEffect->SetMatrix("projection", glm::value_ptr(proj));
 		m_pBRDFVisEffect->SetMatrix("view", m_Cam.GetViewMatrix());
 		//m_pBRDFVisEffect->SetMatrix("view", glm::value_ptr(view));
 		m_pBRDFVisEffect->SetMatrix("model", glm::value_ptr(model));
+		m_pBRDFVisEffect->SetMatrix("tranInvModel", glm::value_ptr(tranInvModel));
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-		m_pBRDFVisEffect->SetInt("brdfTexture", 0);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-		m_pBRDFVisEffect->SetInt("dTexture", 1);
-
-		glBindVertexArray(testObject.GetVAO());
-		glDrawElements(GL_TRIANGLES, testObject.GetIndicesSize(), GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
+		m_pModel->Draw(*m_pBRDFVisEffect);
 	}
 
 	{
@@ -337,26 +339,32 @@ void ModelViewWindow::OpenModelData()
 	if (file.empty())
 		return;
 
-	int width, height;
-	unsigned char* image = SOIL_load_image(file.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
-	if (!image)
+	if (m_pModel)
+	{
+		delete m_pModel;
+		m_pModel = NULL;
+	}
+
+	m_pModel = new BRDFModel::Model();
+	if (!m_pModel->LoadModel(file.c_str()))
 	{
 		std::string message = "Cannot load file ";
 		message = message + file;
 		NPOSHelper::CreateMessageBox(message.c_str(), "Load BRDF Data Failure", NPOSHelper::MSGBOX_OK);
 		return;
 	}
+}
 
-	glGenTextures(1, &m_iBRDFEstTex);
-	glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	SOIL_free_image_data(image);
-	glBindTexture(GL_TEXTURE_2D, 0);
+void ModelViewWindow::SetBRDFData(const char* path)
+{
+	int width, height;
+	if (!NPGLHelper::loadTextureFromFile(path, m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST))
+	{
+		std::string message = "Cannot load file ";
+		message = message + path;
+		NPOSHelper::CreateMessageBox(message.c_str(), "Load BRDF Data Failure", NPOSHelper::MSGBOX_OK);
+		return;
+	}
 
 	m_bIsLoadTexture = true;
 }

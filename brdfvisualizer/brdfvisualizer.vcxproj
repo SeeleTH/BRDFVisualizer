@@ -150,6 +150,8 @@
     <ClInclude Include="meshhelper.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\shader\BRDFModelPS.glsl" />
+    <None Include="..\shader\BRDFModelVS.glsl" />
     <None Include="..\shader\debugLinePS.glsl" />
     <None Include="..\shader\debugLineVS.glsl" />
     <None Include="..\shader\BRDFVisualizePS.glsl" />

@@ -82,5 +82,11 @@
     <None Include="..\shader\BRDFVisualizeVS.glsl">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="..\shader\BRDFModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\BRDFModelVS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
