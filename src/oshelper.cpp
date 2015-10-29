@@ -10,7 +10,7 @@ namespace NPOSHelper
 	std::string BrowseFile(const char* filter)
 	{
 		OPENFILENAME ofn;
-		char szFile[100];
+		char szFile[512];
 
 		ZeroMemory(&ofn, sizeof(ofn));
 		ofn.lStructSize = sizeof(ofn);

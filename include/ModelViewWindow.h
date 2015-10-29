@@ -38,6 +38,17 @@ namespace BRDFModel
 			SetupMesh();
 		}
 
+		~Mesh()
+		{
+			for (auto &texture : m_textures)
+			{
+				glDeleteTextures(1, &texture.id);
+			}
+			glDeleteVertexArrays(1,&m_iVAO);
+			glDeleteBuffers(1,&m_iVBO);
+			glDeleteBuffers(1,&m_iEBO);
+		}
+
 		void Draw(NPGLHelper::Effect &effect);
 
 	protected:
@@ -51,6 +62,7 @@ namespace BRDFModel
 	class Model {
 	public:
 		Model();
+		~Model() { m_meshes.clear(); }
 
 		void Draw(NPGLHelper::Effect &effect);
 		bool LoadModel(const char* path);

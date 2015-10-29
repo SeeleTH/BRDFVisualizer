@@ -19,11 +19,11 @@ namespace BRDFModel
 			std::string texName = m_textures[i].name;
 			if (m_textures[i].type == 0)
 			{
-				texName += diffuseNr++;
+				texName += std::to_string(diffuseNr++);
 			}
 			else
 			{
-				texName += specularNr++;
+				texName += std::to_string(specularNr++);
 			}
 			effect.SetInt(texName.c_str(), i);
 			glBindTexture(GL_TEXTURE_2D, m_textures[i].id);
@@ -160,7 +160,7 @@ namespace BRDFModel
 			aiString str;
 			mat->GetTexture(type, i, &str);
 			Texture texture;
-			std::string fullpath = m_sDirectory + str.C_Str();
+			std::string fullpath = m_sDirectory + "\\" + str.C_Str();
 			if (NPGLHelper::loadTextureFromFile(fullpath.c_str(), texture.id, GL_CLAMP, GL_CLAMP, GL_LINEAR, GL_LINEAR))
 			{
 				texture.name = name;
@@ -216,7 +216,7 @@ int ModelViewWindow::OnInit()
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	OpenModelData();
 

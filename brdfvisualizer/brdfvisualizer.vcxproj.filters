@@ -33,7 +33,7 @@
     <ClCompile Include="..\src\oshelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ModelViewWinfow.cpp">
+    <ClCompile Include="..\src\ModelViewWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

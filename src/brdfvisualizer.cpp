@@ -12,7 +12,7 @@
 int main()
 {
 	NPGLHelper::App mainApp;
-	return mainApp.Run(new BRDFVisualizer("BRDF Visualizer", 800, 600));
+	return mainApp.Run(new ModelViewWindow("BRDF Visualizer", 800, 600));
 }
 
 
