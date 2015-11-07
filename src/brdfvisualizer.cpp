@@ -12,7 +12,7 @@
 int main()
 {
 	NPGLHelper::App mainApp;
-	return mainApp.Run(new ModelViewWindow("BRDF Visualizer", 800, 600));
+	return mainApp.Run(new BRDFVisualizer("BRDF Visualizer", 800, 600));
 }
 
 
@@ -33,6 +33,9 @@ BRDFVisualizer::BRDFVisualizer(const char* name, const int sizeW, const int size
 	, m_pBRDFVisEffect(nullptr)
 	, m_bIsLoadTexture(false)
 	, m_uiModelWindowID(0)
+	, m_sBRDFFilePath("")
+	, m_uiNPH(64)
+	, m_uiNTH(16)
 {
 }
 
@@ -109,8 +112,8 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 	if (m_bIsLoadTexture)
 	{
 		m_pBRDFVisEffect->activeEffect();
-		m_pBRDFVisEffect->SetInt("n_th", 16);
-		m_pBRDFVisEffect->SetInt("n_ph", 64);
+		m_pBRDFVisEffect->SetInt("n_th", m_uiNTH);
+		m_pBRDFVisEffect->SetInt("n_ph", m_uiNPH);
 		m_pBRDFVisEffect->SetFloat("i_yaw", m_fInYaw);
 		m_pBRDFVisEffect->SetFloat("i_pitch", m_fInPitch);
 		m_pBRDFVisEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
@@ -206,6 +209,7 @@ void BRDFVisualizer::OpenBRDFData()
 		return;
 	}
 
+	m_sBRDFFilePath = file;
 	m_bIsLoadTexture = true;
 }
 
@@ -219,6 +223,6 @@ void BRDFVisualizer::OpenModelWindow()
 	ModelViewWindow* modelViewWindow = (ModelViewWindow*)GetOwner()->GetWindow(m_uiModelWindowID);
 	if (modelViewWindow)
 	{
-
+		modelViewWindow->SetBRDFData(m_sBRDFFilePath.c_str(), m_uiNTH, m_uiNPH);
 	}
 }

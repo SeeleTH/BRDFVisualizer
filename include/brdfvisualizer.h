@@ -36,6 +36,9 @@ protected:
 	glm::vec2 m_v2CurrentCursorPos;
 	NPGLHelper::DebugLine m_InLine;
 	NPGLHelper::DebugLine m_AxisLine[3];
+	std::string m_sBRDFFilePath;
+	unsigned int m_uiNPH;
+	unsigned int m_uiNTH;
 
 	unsigned int m_uiModelWindowID;
 };

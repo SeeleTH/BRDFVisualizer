@@ -284,6 +284,13 @@ namespace NPGLHelper
 		glUniform1f(valueLoc, value);
 	}
 
+	void Effect::SetVec3(const char* var, const float x, const float y, const float z)
+	{
+		assert(m_iProgram >= 0);
+		GLuint valueLoc = glGetUniformLocation(m_iProgram, var);
+		glUniform3f(valueLoc, x, y, z);
+	}
+
 	Window::Window(const char* name, const int sizeW, const int sizeH)
 		: m_sName(name)
 		, m_iSizeW(sizeW)

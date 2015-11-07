@@ -15,7 +15,7 @@ namespace BRDFModel
 		unsigned int specularNr = 1;
 		for (unsigned int i = 0; i < m_textures.size(); i++)
 		{
-			glActiveTexture(GL_TEXTURE0 + i);
+			glActiveTexture(GL_TEXTURE0 + i + 1);
 			std::string texName = m_textures[i].name;
 			if (m_textures[i].type == 0)
 			{
@@ -25,7 +25,7 @@ namespace BRDFModel
 			{
 				texName += std::to_string(specularNr++);
 			}
-			effect.SetInt(texName.c_str(), i);
+			effect.SetInt(texName.c_str(), i+1);
 			glBindTexture(GL_TEXTURE_2D, m_textures[i].id);
 		}
 		glBindVertexArray(m_iVAO);
@@ -68,7 +68,7 @@ namespace BRDFModel
 	{
 		for (auto &mesh : m_meshes)
 		{
-			mesh.Draw(effect);
+			mesh->Draw(effect);
 		}
 	}
 
@@ -93,7 +93,7 @@ namespace BRDFModel
 	{
 		for (unsigned int i = 0; i < node->mNumMeshes; i++)
 		{
-			Mesh loadedMesh = ProcessMesh(scene->mMeshes[node->mMeshes[i]], scene);
+			Mesh *loadedMesh = ProcessMesh(scene->mMeshes[node->mMeshes[i]], scene);
 			m_meshes.push_back(loadedMesh);
 		}
 
@@ -103,7 +103,7 @@ namespace BRDFModel
 		}
 	}
 
-	Mesh Model::ProcessMesh(aiMesh* mesh, const aiScene* scene)
+	Mesh* Model::ProcessMesh(aiMesh* mesh, const aiScene* scene)
 	{
 		std::vector<Vertex> vertices;
 		std::vector<GLuint> indices;
@@ -148,7 +148,7 @@ namespace BRDFModel
 			
 		}
 
-		return Mesh(vertices, indices, textures);
+		return new Mesh(vertices, indices, textures);
 
 	}
 
@@ -190,6 +190,7 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_pBRDFVisEffect(nullptr)
 	, m_bIsLoadTexture(false)
 	, m_pModel(nullptr)
+	, m_v3LightColor(5.f,5.f,5.f)
 {
 }
 
@@ -265,12 +266,30 @@ int ModelViewWindow::OnTick(const float deltaTime)
 	if (/*m_bIsLoadTexture &&*/ m_pModel)
 	{
 		m_pBRDFVisEffect->activeEffect();
+		m_pBRDFVisEffect->SetInt("n_th", m_uiNTH);
+		m_pBRDFVisEffect->SetInt("n_ph", m_uiNPH);
 		m_pBRDFVisEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
 		//m_pBRDFVisEffect->SetMatrix("projection", glm::value_ptr(proj));
 		m_pBRDFVisEffect->SetMatrix("view", m_Cam.GetViewMatrix());
 		//m_pBRDFVisEffect->SetMatrix("view", glm::value_ptr(view));
 		m_pBRDFVisEffect->SetMatrix("model", glm::value_ptr(model));
 		m_pBRDFVisEffect->SetMatrix("tranInvModel", glm::value_ptr(tranInvModel));
+
+		glm::vec3 lightDir;
+		lightDir.y = -sin(m_fInYaw);
+		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
+		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
+		m_pBRDFVisEffect->SetVec3("lightDir", lightDir.x, lightDir.y, lightDir.z);
+		m_pBRDFVisEffect->SetVec3("lightColor", m_v3LightColor.x, m_v3LightColor.y, m_v3LightColor.z);
+		glm::vec3 camDir = m_Cam.GetDir();
+		m_pBRDFVisEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
+
+		if (m_bIsLoadTexture)
+		{
+			glActiveTexture(GL_TEXTURE0);
+			m_pBRDFVisEffect->SetInt("texture_brdf", 0);
+			glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
+		}
 
 		m_pModel->Draw(*m_pBRDFVisEffect);
 	}
@@ -355,8 +374,20 @@ void ModelViewWindow::OpenModelData()
 	}
 }
 
-void ModelViewWindow::SetBRDFData(const char* path)
+void ModelViewWindow::SetBRDFData(const char* path, unsigned int n_th, unsigned int n_ph)
 {
+	if (m_bIsLoadTexture)
+	{
+		glDeleteTextures(1, &m_iBRDFEstTex);
+		m_bIsLoadTexture = false;
+	}
+
+	if (strlen(path) <= 0)
+	{
+		m_bIsLoadTexture = false;
+		return;
+	}
+
 	int width, height;
 	if (!NPGLHelper::loadTextureFromFile(path, m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST))
 	{
@@ -365,6 +396,7 @@ void ModelViewWindow::SetBRDFData(const char* path)
 		NPOSHelper::CreateMessageBox(message.c_str(), "Load BRDF Data Failure", NPOSHelper::MSGBOX_OK);
 		return;
 	}
-
+	m_uiNTH = n_th;
+	m_uiNPH = n_ph;
 	m_bIsLoadTexture = true;
 }

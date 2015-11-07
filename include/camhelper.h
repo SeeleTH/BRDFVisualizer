@@ -80,6 +80,16 @@ namespace NPCamHelper
 		inline const float GetYaw() { return m_fYaw; }
 		inline const float GetPitch() { return m_fPitch; }
 		inline const float GetRadius() { return m_fRadius; }
+		inline const glm::vec3 GetDir() 
+		{
+			glm::vec3 result;
+			m_fYaw = glm::clamp(m_fYaw, m_fYawMin, m_fYawMax);
+			result.y = -sin(m_fYaw);
+			float temp = cos(m_fYaw);
+			result.z = -temp * cos(m_fPitch);
+			result.x = -temp * sin(m_fPitch);
+			return glm::normalize(result);
+		}
 
 		virtual void UpdateViewMatrix()
 		{

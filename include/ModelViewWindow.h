@@ -62,17 +62,25 @@ namespace BRDFModel
 	class Model {
 	public:
 		Model();
-		~Model() { m_meshes.clear(); }
+		~Model() 
+		{
+			for (auto &mesh : m_meshes)
+			{
+				if (mesh)
+					delete mesh;
+			}
+			m_meshes.clear(); 
+		}
 
 		void Draw(NPGLHelper::Effect &effect);
 		bool LoadModel(const char* path);
 
 	protected:
 		void ProcessNode(aiNode* node, const aiScene* scene);
-		Mesh ProcessMesh(aiMesh* mesh, const aiScene* scene);
+		Mesh* ProcessMesh(aiMesh* mesh, const aiScene* scene);
 		std::vector<Texture> LoadMaterialTextures(aiMaterial* mat, aiTextureType type, const char* name, const unsigned int typeId);
 
-		std::vector<Mesh> m_meshes;
+		std::vector<Mesh*> m_meshes;
 		std::string m_sDirectory;
 	};
 }
@@ -89,7 +97,7 @@ public:
 	virtual void OnHandleInputMSG(const INPUTMSG &msg);
 
 	void OpenModelData();
-	void SetBRDFData(const char* path);
+	void SetBRDFData(const char* path, unsigned int n_th, unsigned int n_ph);
 
 protected:
 	GLuint m_iBRDFEstTex;
@@ -99,6 +107,8 @@ protected:
 	NPGLHelper::RenderObject testObject;
 	NPCamHelper::RotateCamera m_Cam;
 
+	unsigned int m_uiNTH, m_uiNPH;
+	glm::vec3 m_v3LightColor;
 	bool m_bIsCamRotate, m_bIsInRotate;
 	float m_fCamSenX, m_fCamSenY;
 	float m_fInSenX, m_fInSenY;
