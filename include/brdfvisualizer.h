@@ -4,6 +4,14 @@
 #include "glhelper.h"
 #include "camhelper.h"
 #include "mathhelper.h"
+#include "macrohelper.h"
+
+#include <AntTweakBar.h>
+#define ATB_ASSERT(FUNC) \
+	if(!FUNC) \
+	{ \
+	DEBUG_COUT(TwGetLastError()); \
+	}
 
 class BRDFVisualizer : public NPGLHelper::Window
 {

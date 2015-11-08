@@ -15,6 +15,13 @@ int main()
 	return mainApp.Run(new BRDFVisualizer("BRDF Visualizer", 800, 600));
 }
 
+void TW_CALL BRDFButton(void * window)
+{
+	BRDFVisualizer* appWin = (BRDFVisualizer*)window;
+	if (appWin)
+		appWin->OpenBRDFData();
+}
+
 
 BRDFVisualizer::BRDFVisualizer(const char* name, const int sizeW, const int sizeH)
 	: Window(name, sizeW, sizeH)
@@ -45,6 +52,15 @@ BRDFVisualizer::~BRDFVisualizer()
 
 int BRDFVisualizer::OnInit()
 {
+	// AntTweakBar Init
+	ATB_ASSERT(TwInit(TW_OPENGL_CORE, nullptr));
+	ATB_ASSERT(TwWindowSize(m_iSizeW, m_iSizeH));
+	TwBar* mainBar = TwNewBar("MainBar");
+	TwDefine(" MainBar help='These properties defines the engine behavior' ");
+	ATB_ASSERT(TwAddButton(mainBar, "openbrdf", BRDFButton, this, "label='Open BRDF File'"));
+	TwAddVarRW(mainBar, "speed", TW_TYPE_FLOAT, &m_fInPitch,
+		" label='Rot speed' min=0 max=2 step=0.01 keyIncr=s keyDecr=S help='Rotation speed (turns/second)' ");
+
 	m_AxisLine[0].Init(m_pShareContent);
 	m_AxisLine[1].Init(m_pShareContent);
 	m_AxisLine[2].Init(m_pShareContent);
@@ -64,7 +80,6 @@ int BRDFVisualizer::OnInit()
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
 	OpenBRDFData();
 
@@ -73,6 +88,7 @@ int BRDFVisualizer::OnInit()
 
 int BRDFVisualizer::OnTick(const float deltaTime)
 {
+	//DEBUG_COUT("BRDFVisualizer::OnTick BGN");
 	// Camera control - bgn
 	glm::vec2 cursorMoved = m_v2CurrentCursorPos - m_v2LastCursorPos;
 	if (m_bIsCamRotate)
@@ -109,6 +125,7 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	if (m_bIsLoadTexture)
 	{
 		m_pBRDFVisEffect->activeEffect();
@@ -132,6 +149,8 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 		glBindVertexArray(testObject.GetVAO());
 		glDrawElements(GL_TRIANGLES, testObject.GetIndicesSize(), GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
+		glActiveTexture(GL_TEXTURE0);
+		m_pBRDFVisEffect->deactiveEffect();
 	}
 
 	{
@@ -152,14 +171,22 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
 	}
 
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		TwDraw();
+	}
+
 	glfwSwapBuffers(GetGLFWWindow());
 
+	//DEBUG_COUT("BRDFVisualizer::OnTick END");
 	return 0;
 }
 
 void BRDFVisualizer::OnTerminate()
 {
 	testObject.ClearGeometry();
+
+	TwTerminate();
 }
 
 void BRDFVisualizer::OnHandleInputMSG(const INPUTMSG &msg)
@@ -175,6 +202,8 @@ void BRDFVisualizer::OnHandleInputMSG(const INPUTMSG &msg)
 			OpenModelWindow();
 		break;
 	case Window::INPUTMSG_MOUSEKEY:
+		if (TwEventMouseButtonGLFW(msg.key, msg.action))
+			break;
 		if (msg.key == GLFW_MOUSE_BUTTON_RIGHT)
 		{
 			m_bIsCamRotate = (msg.action == GLFW_PRESS);
@@ -185,6 +214,7 @@ void BRDFVisualizer::OnHandleInputMSG(const INPUTMSG &msg)
 		}
 		break;
 	case Window::INPUTMSG_MOUSECURSOR:
+		TwEventMousePosGLFW(msg.xpos, msg.ypos);
 		m_v2CurrentCursorPos.x = msg.xpos;
 		m_v2CurrentCursorPos.y = msg.ypos;
 		break;
