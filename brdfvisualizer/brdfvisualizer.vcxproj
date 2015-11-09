@@ -94,7 +94,7 @@
       <AdditionalDependencies>opengl32.lib;glfw3.lib;glew32mxs.lib;SOIL.lib;assimp.lib;AntTweakBar64.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(SolutionDir)3rdParty\assimp\lib\$(Configuration)\$(Platform)\assimp.dll" "$(TargetDir)assimp.dll"
+      <Command>copy /Y "$(SolutionDir)3rdParty\assimp\lib\$(Configuration)\$(Platform)\assimp.dll" "$(TargetDir)assimpd.dll"
 copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\AntTweakBar64.dll" "$(TargetDir)AntTweakBar64.dll"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

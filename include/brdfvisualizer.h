@@ -34,6 +34,7 @@ protected:
 	NPGLHelper::RenderObject testObject;
 	NPCamHelper::RotateCamera m_Cam;
 
+	bool m_bIsWireFrame;
 	bool m_bIsCamRotate, m_bIsInRotate;
 	float m_fCamSenX, m_fCamSenY;
 	float m_fInSenX, m_fInSenY;

@@ -5,7 +5,7 @@ in vec3 outColor;
 
 out vec4 color;
 
-uniform sampler2D dTexture;
+//uniform sampler2D dTexture;
 
 void main()
 {

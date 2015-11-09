@@ -15,7 +15,7 @@ namespace BRDFModel
 		unsigned int specularNr = 1;
 		for (unsigned int i = 0; i < m_textures.size(); i++)
 		{
-			glActiveTexture(GL_TEXTURE0 + i + 1);
+			glActiveTexture(GL_TEXTURE1 + i);
 			std::string texName = m_textures[i].name;
 			if (m_textures[i].type == 0)
 			{
@@ -25,8 +25,8 @@ namespace BRDFModel
 			{
 				texName += std::to_string(specularNr++);
 			}
-			effect.SetInt(texName.c_str(), i+1);
 			glBindTexture(GL_TEXTURE_2D, m_textures[i].id);
+			effect.SetInt(texName.c_str(), i + 1);
 		}
 		glBindVertexArray(m_iVAO);
 		glDrawElements(GL_TRIANGLES, m_indices.size(), GL_UNSIGNED_INT, 0);
@@ -209,8 +209,8 @@ int ModelViewWindow::OnInit()
 	if (!m_pBRDFVisEffect->GetIsLinked())
 	{
 		m_pBRDFVisEffect->initEffect();
-		m_pBRDFVisEffect->attachShaderFromFile("../shader/BRDFModelVS.glsl", GL_VERTEX_SHADER);
-		m_pBRDFVisEffect->attachShaderFromFile("../shader/BRDFModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pBRDFVisEffect->attachShaderFromFile("..\\shader\\BRDFModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBRDFVisEffect->attachShaderFromFile("..\\shader\\BRDFModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pBRDFVisEffect->linkEffect();
 	}
 
@@ -265,6 +265,8 @@ int ModelViewWindow::OnTick(const float deltaTime)
 
 	if (/*m_bIsLoadTexture &&*/ m_pModel)
 	{
+		UpdateBRDFData();
+
 		m_pBRDFVisEffect->activeEffect();
 		m_pBRDFVisEffect->SetInt("n_th", m_uiNTH);
 		m_pBRDFVisEffect->SetInt("n_ph", m_uiNPH);
@@ -287,30 +289,31 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		if (m_bIsLoadTexture)
 		{
 			glActiveTexture(GL_TEXTURE0);
-			m_pBRDFVisEffect->SetInt("texture_brdf", 0);
 			glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
+			m_pBRDFVisEffect->SetInt("texture_brdf", 0);
 		}
 
 		m_pModel->Draw(*m_pBRDFVisEffect);
+		m_pBRDFVisEffect->deactiveEffect();
 	}
 
-	{
-		m_AxisLine[0].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(1.f, 0.f, 0.f), NPGeoHelper::vec3(1.0f, 0.f, 0.f)
-			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
-		m_AxisLine[1].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(0.f, 1.f, 0.f), NPGeoHelper::vec3(0.0f, 1.f, 0.f)
-			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
-		m_AxisLine[2].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(0.f, 0.f, 1.f), NPGeoHelper::vec3(0.0f, 0.f, 1.f)
-			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
-	}
+	//{
+	//	m_AxisLine[0].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(1.f, 0.f, 0.f), NPGeoHelper::vec3(1.0f, 0.f, 0.f)
+	//		, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+	//	m_AxisLine[1].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(0.f, 1.f, 0.f), NPGeoHelper::vec3(0.0f, 1.f, 0.f)
+	//		, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+	//	m_AxisLine[2].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(0.f, 0.f, 1.f), NPGeoHelper::vec3(0.0f, 0.f, 1.f)
+	//		, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+	//}
 
-	{
-		glm::vec3 InLineEnd;
-		InLineEnd.y = sin(m_fInYaw) * 10.f;
-		InLineEnd.x = cos(m_fInYaw) * sin(m_fInPitch) * 10.f;
-		InLineEnd.z = cos(m_fInYaw) * cos(m_fInPitch) * 10.f;
-		m_InLine.Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(InLineEnd.x, InLineEnd.y, InLineEnd.z), NPGeoHelper::vec3(1.0f, 1.f, 1.f)
-			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
-	}
+	//{
+	//	glm::vec3 InLineEnd;
+	//	InLineEnd.y = sin(m_fInYaw) * 10.f;
+	//	InLineEnd.x = cos(m_fInYaw) * sin(m_fInPitch) * 10.f;
+	//	InLineEnd.z = cos(m_fInYaw) * cos(m_fInPitch) * 10.f;
+	//	m_InLine.Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(InLineEnd.x, InLineEnd.y, InLineEnd.z), NPGeoHelper::vec3(1.0f, 1.f, 1.f)
+	//		, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+	//}
 
 	glfwSwapBuffers(GetGLFWWindow());
 
@@ -376,27 +379,40 @@ void ModelViewWindow::OpenModelData()
 
 void ModelViewWindow::SetBRDFData(const char* path, unsigned int n_th, unsigned int n_ph)
 {
-	if (m_bIsLoadTexture)
-	{
-		glDeleteTextures(1, &m_iBRDFEstTex);
-		m_bIsLoadTexture = false;
-	}
+	m_bIsBRDFUpdated = false;
+	m_sNewBRDFPath = path;
+	m_uiNewTH = n_th;
+	m_uiNewPH = n_ph;
+}
 
-	if (strlen(path) <= 0)
+void ModelViewWindow::UpdateBRDFData()
+{
+	if (!m_bIsBRDFUpdated)
 	{
-		m_bIsLoadTexture = false;
-		return;
-	}
+		m_bIsBRDFUpdated = true;
 
-	int width, height;
-	if (!NPGLHelper::loadTextureFromFile(path, m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST))
-	{
-		std::string message = "Cannot load file ";
-		message = message + path;
-		NPOSHelper::CreateMessageBox(message.c_str(), "Load BRDF Data Failure", NPOSHelper::MSGBOX_OK);
-		return;
+		if (m_bIsLoadTexture)
+		{
+			glDeleteTextures(1, &m_iBRDFEstTex);
+			m_bIsLoadTexture = false;
+		}
+
+		if (m_sNewBRDFPath.length() <= 0)
+		{
+			m_bIsLoadTexture = false;
+			return;
+		}
+
+		int width, height;
+		if (!NPGLHelper::loadTextureFromFile(m_sNewBRDFPath.c_str(), m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST))
+		{
+			std::string message = "Cannot load file ";
+			message = message + m_sNewBRDFPath;
+			NPOSHelper::CreateMessageBox(message.c_str(), "Load BRDF Data Failure", NPOSHelper::MSGBOX_OK);
+			return;
+		}
+		m_uiNTH = m_uiNewTH;
+		m_uiNPH = m_uiNewPH;
+		m_bIsLoadTexture = true;
 	}
-	m_uiNTH = n_th;
-	m_uiNPH = n_ph;
-	m_bIsLoadTexture = true;
 }

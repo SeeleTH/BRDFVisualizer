@@ -24,7 +24,10 @@ namespace NPOSHelper
 		ofn.nMaxFileTitle = 0;
 		ofn.lpstrInitialDir = NULL;
 		ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+		std::string curDir = NPOSHelper::GetOSCurrentDirectory();
 		GetOpenFileName(&ofn);
+		NPOSHelper::SetOSCurrentDirectory(curDir);
 
 		return szFile;
 	}
@@ -32,6 +35,19 @@ namespace NPOSHelper
 	int CreateMessageBox(const char* text, const char* title, const unsigned int type)
 	{
 		return MessageBox(NULL, text, title, type);
+	}
+
+	std::string GetOSCurrentDirectory()
+	{
+		char dir[1024];
+		GetCurrentDirectory(1024, dir);
+		std::string result = dir;
+		return result;
+	}
+
+	void SetOSCurrentDirectory(std::string &dir)
+	{
+		SetCurrentDirectory(dir.c_str());
 	}
 #endif
 }

@@ -100,19 +100,22 @@ void main()
 	vec3 tangent = normalize(outTangent.xyz - dot(normal, outTangent.xyz) * normal);
 	vec3 bitangent = normalize(cross(tangent, normal));
 	mat3 tbn = transpose(mat3(tangent, normal, bitangent));
-	//vec3 test = normalize(tbn * vec3(0.f, 0.f, 1.f));
-	//test = (test + vec3(1.0f, 1.0f, 1.0f))*0.5f;
-	//color = vec4(test, 1.0f);
 
 	vec3 lightDirL = tbn * lightDir;
 	vec3 viewDirL = tbn * viewDir;
 	vec3 brdf = SampleBRDF_Linear(-lightDirL, -viewDirL);
 	vec4 diff = texture(texture_diffuse1, outTexCoord);
-	vec4 result = vec4(brdf,1.0f) * vec4(lightColor,1.0f) * diff;
+	vec4 result = vec4(brdf, 1.0f) + diff * clamp(dot(-lightDir, normal), 0.f, 1.f);
 	color = result;
-	//color = vec4(vec3(dot(-lightDirL,vec3(0.f,1.f,0.f))),1.f);
+	//color = diff;
+	//color = vec4(vec3(dot(-lightDirL,vec3(0.f,0.f,1.f))),1.f);
 
 	//color = texture(texture_diffuse1, outTexCoord);
 	//color = vec4(outTexCoord, 1.0f, 1.0f);
-	//color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+	//color = vec4(normal, 1.0f);
+	
+	//vec3 test = normalize(tbn * vec3(0.f, 1.f, 0.f));
+	//test = (test + vec3(1.0f, 1.0f, 1.0f))*0.5f;
+	//color = vec4(test, 1.0f);
+	//color = vec4(brdf, 1.0f);
 }

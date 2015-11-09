@@ -100,6 +100,13 @@ public:
 	void SetBRDFData(const char* path, unsigned int n_th, unsigned int n_ph);
 
 protected:
+	void UpdateBRDFData();
+
+	bool m_bIsBRDFUpdated;
+	std::string m_sNewBRDFPath;
+	unsigned int m_uiNewTH;
+	unsigned int m_uiNewPH;
+
 	GLuint m_iBRDFEstTex;
 	BRDFModel::Model* m_pModel;
 	bool m_bIsLoadTexture;

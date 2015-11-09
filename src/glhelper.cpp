@@ -22,13 +22,15 @@ namespace NPGLHelper
 {
 	bool loadASCIIFromFile(std::string file, std::string &content)
 	{
-		std::ifstream t(file);
+		std::ifstream t(file, std::ios::in);
 		if (!t.good())
 			return false;
 
 		std::stringstream buffer;
 		buffer << t.rdbuf();
 		content = buffer.str();
+		t.close();
+		t.clear();
 		return true;
 	}
 

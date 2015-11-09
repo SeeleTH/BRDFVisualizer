@@ -25,6 +25,9 @@ namespace NPOSHelper
 
 	//NPOSHelper::CreateMessageBox(NPOSHelper::BrowseFile("All\0*.*\0Text\0*.TXT\0").c_str(), "", NPOSHelper::MSGBOX_OK);
 	int CreateMessageBox(const char* text, const char* title, const unsigned int type);
+
+	std::string GetOSCurrentDirectory();
+	void SetOSCurrentDirectory(std::string &dir);
 }
 
 #endif

@@ -22,6 +22,13 @@ void TW_CALL BRDFButton(void * window)
 		appWin->OpenBRDFData();
 }
 
+void TW_CALL ModelButton(void * window)
+{
+	BRDFVisualizer* appWin = (BRDFVisualizer*)window;
+	if (appWin)
+		appWin->OpenModelWindow();
+}
+
 
 BRDFVisualizer::BRDFVisualizer(const char* name, const int sizeW, const int sizeH)
 	: Window(name, sizeW, sizeH)
@@ -43,6 +50,7 @@ BRDFVisualizer::BRDFVisualizer(const char* name, const int sizeW, const int size
 	, m_sBRDFFilePath("")
 	, m_uiNPH(64)
 	, m_uiNTH(16)
+	, m_bIsWireFrame(true)
 {
 }
 
@@ -56,10 +64,19 @@ int BRDFVisualizer::OnInit()
 	ATB_ASSERT(TwInit(TW_OPENGL_CORE, nullptr));
 	ATB_ASSERT(TwWindowSize(m_iSizeW, m_iSizeH));
 	TwBar* mainBar = TwNewBar("MainBar");
-	TwDefine(" MainBar help='These properties defines the engine behavior' ");
+	ATB_ASSERT(TwDefine(" MainBar help='These properties defines the engine behavior' "));
 	ATB_ASSERT(TwAddButton(mainBar, "openbrdf", BRDFButton, this, "label='Open BRDF File'"));
-	TwAddVarRW(mainBar, "speed", TW_TYPE_FLOAT, &m_fInPitch,
-		" label='Rot speed' min=0 max=2 step=0.01 keyIncr=s keyDecr=S help='Rotation speed (turns/second)' ");
+	ATB_ASSERT(TwAddVarRW(mainBar, "n_ph", TW_TYPE_UINT32, &m_uiNPH,
+		" label='BRDF File N_PH' step=1 keyIncr=s keyDecr=S help='N_PH' "));
+	ATB_ASSERT(TwAddVarRW(mainBar, "n_th", TW_TYPE_UINT32, &m_uiNTH,
+		" label='BRDF File N_TH' step=1 keyIncr=d keyDecr=D help='N_TH' "));
+	ATB_ASSERT(TwAddSeparator(mainBar, "brdffilesep", ""));
+	ATB_ASSERT(TwAddVarRW(mainBar, "wireframe", TW_TYPE_BOOLCPP, &m_bIsWireFrame,
+		" label='Show Wireframe' help='Show Wireframe' "));
+	ATB_ASSERT(TwAddSeparator(mainBar, "rendersep", ""));
+	ATB_ASSERT(TwAddButton(mainBar, "showmodelview", ModelButton, this, "label='Show Model View'"));
+	ATB_ASSERT(TwAddSeparator(mainBar, "modelviewsep", ""));
+	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='Left Click and Drag to move light incident direction'"));
 
 	m_AxisLine[0].Init(m_pShareContent);
 	m_AxisLine[1].Init(m_pShareContent);
@@ -81,7 +98,7 @@ int BRDFVisualizer::OnInit()
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_FRONT);
 
-	OpenBRDFData();
+	//OpenBRDFData();
 
 	return 0;
 }
@@ -124,8 +141,10 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (m_bIsWireFrame)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	else
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	if (m_bIsLoadTexture)
 	{
 		m_pBRDFVisEffect->activeEffect();
@@ -142,9 +161,9 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
 		m_pBRDFVisEffect->SetInt("brdfTexture", 0);
-		glActiveTexture(GL_TEXTURE1);
-		glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-		m_pBRDFVisEffect->SetInt("dTexture", 1);
+		//glActiveTexture(GL_TEXTURE1);
+		//glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
+		//m_pBRDFVisEffect->SetInt("dTexture", 1);
 
 		glBindVertexArray(testObject.GetVAO());
 		glDrawElements(GL_TRIANGLES, testObject.GetIndicesSize(), GL_UNSIGNED_INT, 0);
