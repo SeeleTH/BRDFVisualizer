@@ -297,23 +297,23 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		m_pBRDFVisEffect->deactiveEffect();
 	}
 
-	//{
-	//	m_AxisLine[0].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(1.f, 0.f, 0.f), NPGeoHelper::vec3(1.0f, 0.f, 0.f)
-	//		, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
-	//	m_AxisLine[1].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(0.f, 1.f, 0.f), NPGeoHelper::vec3(0.0f, 1.f, 0.f)
-	//		, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
-	//	m_AxisLine[2].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(0.f, 0.f, 1.f), NPGeoHelper::vec3(0.0f, 0.f, 1.f)
-	//		, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
-	//}
+	{
+		m_AxisLine[0].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(1.f, 0.f, 0.f), NPGeoHelper::vec3(1.0f, 0.f, 0.f)
+			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+		m_AxisLine[1].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(0.f, 1.f, 0.f), NPGeoHelper::vec3(0.0f, 1.f, 0.f)
+			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+		m_AxisLine[2].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(0.f, 0.f, 1.f), NPGeoHelper::vec3(0.0f, 0.f, 1.f)
+			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+	}
 
-	//{
-	//	glm::vec3 InLineEnd;
-	//	InLineEnd.y = sin(m_fInYaw) * 10.f;
-	//	InLineEnd.x = cos(m_fInYaw) * sin(m_fInPitch) * 10.f;
-	//	InLineEnd.z = cos(m_fInYaw) * cos(m_fInPitch) * 10.f;
-	//	m_InLine.Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(InLineEnd.x, InLineEnd.y, InLineEnd.z), NPGeoHelper::vec3(1.0f, 1.f, 1.f)
-	//		, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
-	//}
+	{
+		glm::vec3 InLineEnd;
+		InLineEnd.y = sin(m_fInYaw) * 10.f;
+		InLineEnd.x = cos(m_fInYaw) * sin(m_fInPitch) * 10.f;
+		InLineEnd.z = cos(m_fInYaw) * cos(m_fInPitch) * 10.f;
+		m_InLine.Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(InLineEnd.x, InLineEnd.y, InLineEnd.z), NPGeoHelper::vec3(1.0f, 1.f, 1.f)
+			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+	}
 
 	glfwSwapBuffers(GetGLFWWindow());
 
