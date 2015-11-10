@@ -1929,6 +1929,29 @@ int ANT_CALL TwInit(ETwGraphAPI _GraphAPI, void *_Device)
     return Res;
 }
 
+int ANT_CALL NPTwInit(int windowID, ETwGraphAPI _GraphAPI, void *_Device)
+{
+#if defined(_DEBUG) && defined(ANT_WINDOWS)
+	_CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF | _CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF));
+#endif
+
+	g_TwMasterMgr = new CTwMgr(_GraphAPI, _Device, windowID);
+	g_Wnds[windowID] = g_TwMasterMgr;
+	g_TwMgr = g_TwMasterMgr;
+
+	TwGenerateDefaultFonts(g_FontScaling);
+	g_TwMgr->m_CurrentFont = g_DefaultNormalFont;
+
+	int Res = TwCreateGraph(_GraphAPI);
+	if (Res)
+		Res = TwInitMgr();
+
+	if (!Res)
+		NPTwTerminate(windowID);
+
+	return Res;
+}
+
 //  ---------------------------------------------------------------------------
 
 int ANT_CALL TwSetLastError(const char *_StaticErrorMessage)
@@ -2007,6 +2030,64 @@ int ANT_CALL TwTerminate()
     return Res;
 }
 
+
+int ANT_CALL NPTwTerminate(int windowID)
+{
+	TwSetCurrentWindow(windowID);
+
+	if (g_TwMgr == NULL)
+	{
+		//TwGlobalError(g_ErrShut); -> not an error
+		return 0;  // already shutdown
+	}
+
+	// For multi-thread safety
+	if (!TwFreeAsyncDrawing())
+		return 0;
+
+	g_TwMgr->m_Terminating = true;
+	TwDeleteAllBars();
+	if (g_TwMgr->m_CursorsCreated)
+		g_TwMgr->FreeCursors();
+
+	if (g_TwMgr->m_Graph)
+	{
+		if (g_TwMgr->m_KeyPressedTextObj)
+		{
+			g_TwMgr->m_Graph->DeleteTextObj(g_TwMgr->m_KeyPressedTextObj);
+			g_TwMgr->m_KeyPressedTextObj = NULL;
+		}
+		if (g_TwMgr->m_InfoTextObj)
+		{
+			g_TwMgr->m_Graph->DeleteTextObj(g_TwMgr->m_InfoTextObj);
+			g_TwMgr->m_InfoTextObj = NULL;
+		}
+	}
+
+	int Res = 1;
+	if (g_TwMgr->m_Graph)
+	{
+		Res = g_TwMgr->m_Graph->Shut();
+		delete g_TwMgr->m_Graph;
+		g_TwMgr->m_Graph = NULL;
+	}
+	TwDeleteDefaultFonts();
+
+	//if (g_TwMgr != g_TwMasterMgr)
+	{
+		delete g_TwMgr;
+		g_TwMgr = NULL;
+	}
+
+	// delete g_TwMasterMgr
+	g_Wnds.erase(windowID);
+	if (g_Wnds.size() > 0)
+	{
+		g_TwMasterMgr = g_TwMgr = g_Wnds.begin()->second;
+	}
+
+	return Res;
+}
 //  ---------------------------------------------------------------------------
 
 int ANT_CALL TwGetCurrentWindow()

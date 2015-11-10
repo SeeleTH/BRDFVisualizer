@@ -140,6 +140,7 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
     <ClCompile Include="..\src\oshelper.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\include\atbhelper.h" />
     <ClInclude Include="..\include\brdfvisualizer.h" />
     <ClInclude Include="..\include\camhelper.h" />
     <ClInclude Include="..\include\geohelper.h" />

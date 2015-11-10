@@ -25,6 +25,7 @@ COGLCoreFuncRec g_OGLCoreFuncRec[ANT_NB_OGL_CORE_FUNC_MAX];
 int g_NbOGLCoreFunc = 0;
 #if defined(ANT_WINDOWS)
 HMODULE g_OGLCoreModule = NULL;
+unsigned int g_OGLCoreRefCount = 0;
 #endif
 
 //  ---------------------------------------------------------------------------
@@ -342,6 +343,7 @@ namespace GLCore { PFNGLGetProcAddress _glGetProcAddress = NULL; }
     
     int LoadOpenGLCore()
     {
+		g_OGLCoreRefCount++;
         if( g_OGLCoreModule!=NULL )
         {
             return 1; // "OpenGL library already loaded"
@@ -393,7 +395,8 @@ namespace GLCore { PFNGLGetProcAddress _glGetProcAddress = NULL; }
     
     int UnloadOpenGLCore()
     {
-        if( g_OGLCoreModule==NULL )
+		g_OGLCoreRefCount--;
+		if (g_OGLCoreModule == NULL || g_OGLCoreRefCount > 0)
         {
             return 1; // "OpenGL library not loaded"
         }

@@ -58,22 +58,22 @@ namespace NPGeoHelper
 			for (unsigned int h = 0; h < horiSlice; h++)
 			{
 				unsigned int index = v * (horiSlice + 1) + h;
+				result.indices.push_back(index + horiSlice + 1);
+				result.indices.push_back(index + 1);
 				result.indices.push_back(index);
-				result.indices.push_back(index + 1);
 				result.indices.push_back(index + horiSlice + 1);
-				result.indices.push_back(index + 1);
 				result.indices.push_back(index + 1 + horiSlice + 1);
-				result.indices.push_back(index + horiSlice + 1);
+				result.indices.push_back(index + 1);
 			}
 			// last
 			{
 				unsigned int index = v * (horiSlice + 1) + horiSlice;
+				result.indices.push_back(index + horiSlice + 1);
+				result.indices.push_back(v * (horiSlice + 1));
 				result.indices.push_back(index);
+				result.indices.push_back((v + 1) * (horiSlice + 1));
 				result.indices.push_back(v * (horiSlice + 1));
 				result.indices.push_back(index + horiSlice + 1);
-				result.indices.push_back(index + horiSlice + 1);
-				result.indices.push_back(v * (horiSlice + 1));
-				result.indices.push_back((v+1) * (horiSlice + 1));
 			}
 		}
 		//last

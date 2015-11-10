@@ -6,6 +6,7 @@
 
 #include "geohelper.h"
 #include "oshelper.h"
+#include "atbhelper.h"
 
 namespace BRDFModel
 {
@@ -200,6 +201,13 @@ ModelViewWindow::~ModelViewWindow()
 
 int ModelViewWindow::OnInit()
 {
+	// AntTweakBar Init
+	ATB_ASSERT(NPTwInit(m_uiID, TW_OPENGL_CORE, nullptr));
+	ATB_ASSERT(TwSetCurrentWindow(m_uiID));
+	ATB_ASSERT(TwWindowSize(m_iSizeW, m_iSizeH));
+	TwBar* mainBar = TwNewBar("ModelView");
+	ATB_ASSERT(TwDefine(" ModelView help='These properties defines the application behavior' "));
+
 	m_AxisLine[0].Init(m_pShareContent);
 	m_AxisLine[1].Init(m_pShareContent);
 	m_AxisLine[2].Init(m_pShareContent);
@@ -315,6 +323,9 @@ int ModelViewWindow::OnTick(const float deltaTime)
 			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
 	}
 
+	ATB_ASSERT(TwSetCurrentWindow(m_uiID));
+	ATB_ASSERT(TwDraw());
+
 	glfwSwapBuffers(GetGLFWWindow());
 
 	return 0;
@@ -323,10 +334,12 @@ int ModelViewWindow::OnTick(const float deltaTime)
 void ModelViewWindow::OnTerminate()
 {
 	testObject.ClearGeometry();
+	NPTwTerminate(m_uiID);
 }
 
 void ModelViewWindow::OnHandleInputMSG(const INPUTMSG &msg)
 {
+	ATB_ASSERT(TwSetCurrentWindow(m_uiID));
 	switch (msg.type)
 	{
 	case Window::INPUTMSG_KEYBOARDKEY:
@@ -336,6 +349,8 @@ void ModelViewWindow::OnHandleInputMSG(const INPUTMSG &msg)
 			OpenModelData();
 		break;
 	case Window::INPUTMSG_MOUSEKEY:
+		if (TwEventMouseButtonGLFW(msg.key, msg.action))
+			break;
 		if (msg.key == GLFW_MOUSE_BUTTON_RIGHT)
 		{
 			m_bIsCamRotate = (msg.action == GLFW_PRESS);
@@ -346,6 +361,7 @@ void ModelViewWindow::OnHandleInputMSG(const INPUTMSG &msg)
 		}
 		break;
 	case Window::INPUTMSG_MOUSECURSOR:
+		TwEventMousePosGLFW(msg.xpos, msg.ypos);
 		m_v2CurrentCursorPos.x = msg.xpos;
 		m_v2CurrentCursorPos.y = msg.ypos;
 		break;

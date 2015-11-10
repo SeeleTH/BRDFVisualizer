@@ -6,13 +6,6 @@
 #include "mathhelper.h"
 #include "macrohelper.h"
 
-#include <AntTweakBar.h>
-#define ATB_ASSERT(FUNC) \
-	if(!FUNC) \
-	{ \
-	DEBUG_COUT(TwGetLastError()); \
-	}
-
 class BRDFVisualizer : public NPGLHelper::Window
 {
 public:
@@ -21,7 +14,8 @@ public:
 
 	virtual int OnInit();
 	virtual int OnTick(const float deltaTime);
-	virtual void OnTerminate();
+	virtual void OnTerminate(); 
+	virtual bool ShouldTerminateProgramOnTerminate() { return true; }
 	virtual void OnHandleInputMSG(const INPUTMSG &msg);
 
 	void OpenBRDFData();

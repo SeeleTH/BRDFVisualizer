@@ -173,10 +173,12 @@ namespace NPGLHelper
 		virtual int OnInit() = 0;
 		virtual int OnTick(const float deltaTime) = 0;
 		virtual void OnTerminate() = 0;
+		virtual bool ShouldTerminateProgramOnTerminate() { return false; }
 		virtual void OnHandleInputMSG(const INPUTMSG &msg) = 0;
 
 		void AddInputMSG(INPUTMSG msg);
 		void ProcessInputMSGQueue();
+
 
 		inline GLEWContext* GetGLEWContext() { return m_pGLEWContext; }
 		inline GLFWwindow* GetGLFWWindow() { return m_pWindow; }
@@ -235,6 +237,7 @@ namespace NPGLHelper
 	protected:
 		int GLInit();
 		bool WindowsUpdate();
+		void TerminateShouldQuitWindows();
 
 		bool m_bIsInit;
 		int m_iSizeW, m_iSizeH;

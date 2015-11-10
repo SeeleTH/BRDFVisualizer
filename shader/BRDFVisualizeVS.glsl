@@ -28,7 +28,7 @@ void GetVectorIndex(vec3 value, out float th, out float ph)
 	{
 		if (valueHori.z >= 0)
 		{
-			pAngle = 3.f / 2.f * M_PI + asin(valueHori.x);
+			pAngle = 3.f / 2.f * M_PI + acos(valueHori.z);
 		}
 		else
 		{
@@ -51,6 +51,10 @@ void GetVectorIndex(vec3 value, out float th, out float ph)
 
 vec3 FetchBRDF(int i_th, int i_ph, int o_th, int o_ph)
 {
+	i_ph = i_ph % n_ph;
+	i_th = i_th % n_th;
+	o_ph = o_ph % n_ph;
+	o_th = o_th % n_th;
 	ivec2 fTarget;
 	fTarget.x = i_th * n_ph + i_ph;
 	fTarget.y = (n_ph * n_th - 1) -( o_th * n_ph + o_ph);

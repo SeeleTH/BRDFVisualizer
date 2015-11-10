@@ -494,6 +494,18 @@ namespace NPGLHelper
 
 	bool App::WindowsUpdate()
 	{
+		TerminateShouldQuitWindows();
+
+		if (m_bForceShutdown && m_mapWindows.size() > 0)
+		{
+			TerminateShouldQuitWindows();
+		}
+
+		return (m_mapWindows.size() > 0);
+	}
+
+	void App::TerminateShouldQuitWindows()
+	{
 		std::vector<unsigned int> removeList;
 		for (auto it = m_mapWindows.begin(); it != m_mapWindows.end(); it++)
 		{
@@ -506,6 +518,8 @@ namespace NPGLHelper
 		for (auto it = removeList.begin(); it != removeList.end(); it++)
 		{
 			Window* closeWin = m_mapWindows[*it];
+			if (closeWin->ShouldTerminateProgramOnTerminate())
+				m_bForceShutdown = true;
 			SetCurrentWindow(*it);
 			closeWin->OnTerminate();
 			GLEWContext* glewCont = closeWin->GetGLEWContext();
@@ -527,8 +541,6 @@ namespace NPGLHelper
 			}
 			m_mapWindows.erase(*it);
 		}
-
-		return (m_mapWindows.size() > 0);
 	}
 
 	unsigned int App::AttachWindow(Window* window, Window* sharedGLWindow)

@@ -5,6 +5,7 @@
 
 #include "geohelper.h"
 #include "oshelper.h"
+#include "atbhelper.h"
 
 #include "ModelViewWindow.h"
 
@@ -61,10 +62,12 @@ BRDFVisualizer::~BRDFVisualizer()
 int BRDFVisualizer::OnInit()
 {
 	// AntTweakBar Init
-	ATB_ASSERT(TwInit(TW_OPENGL_CORE, nullptr));
+	//ATB_ASSERT(TwInit(TW_OPENGL_CORE, nullptr));
+	ATB_ASSERT(NPTwInit(m_uiID, TW_OPENGL_CORE, nullptr));
+	ATB_ASSERT(TwSetCurrentWindow(m_uiID));
 	ATB_ASSERT(TwWindowSize(m_iSizeW, m_iSizeH));
-	TwBar* mainBar = TwNewBar("MainBar");
-	ATB_ASSERT(TwDefine(" MainBar help='These properties defines the engine behavior' "));
+	TwBar* mainBar = TwNewBar("BRDFVisualizer");
+	ATB_ASSERT(TwDefine(" BRDFVisualizer help='These properties defines the application behavior' "));
 	ATB_ASSERT(TwAddButton(mainBar, "openbrdf", BRDFButton, this, "label='Open BRDF File'"));
 	ATB_ASSERT(TwAddVarRW(mainBar, "n_ph", TW_TYPE_UINT32, &m_uiNPH,
 		" label='BRDF File N_PH' step=1 keyIncr=s keyDecr=S help='N_PH' "));
@@ -76,7 +79,9 @@ int BRDFVisualizer::OnInit()
 	ATB_ASSERT(TwAddSeparator(mainBar, "rendersep", ""));
 	ATB_ASSERT(TwAddButton(mainBar, "showmodelview", ModelButton, this, "label='Show Model View'"));
 	ATB_ASSERT(TwAddSeparator(mainBar, "modelviewsep", ""));
-	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='Left Click and Drag to move light incident direction'"));
+	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='LClick+Drag: Rot Light dir'"));
+	ATB_ASSERT(TwAddButton(mainBar, "instruction2", NULL, NULL, "label='RClick+Drag: Rot Camera dir'"));
+	ATB_ASSERT(TwAddButton(mainBar, "instruction3", NULL, NULL, "label='Scroll: Zoom Camera in/out'"));
 
 	m_AxisLine[0].Init(m_pShareContent);
 	m_AxisLine[1].Init(m_pShareContent);
@@ -96,7 +101,7 @@ int BRDFVisualizer::OnInit()
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
-	glCullFace(GL_FRONT);
+	glCullFace(GL_BACK);
 
 	//OpenBRDFData();
 
@@ -192,7 +197,8 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 
 	{
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		TwDraw();
+		ATB_ASSERT(TwSetCurrentWindow(m_uiID));
+		ATB_ASSERT(TwDraw());
 	}
 
 	glfwSwapBuffers(GetGLFWWindow());
@@ -205,11 +211,12 @@ void BRDFVisualizer::OnTerminate()
 {
 	testObject.ClearGeometry();
 
-	TwTerminate();
+	NPTwTerminate(m_uiID);
 }
 
 void BRDFVisualizer::OnHandleInputMSG(const INPUTMSG &msg)
 {
+	ATB_ASSERT(TwSetCurrentWindow(m_uiID));
 	switch (msg.type)
 	{
 	case Window::INPUTMSG_KEYBOARDKEY:
