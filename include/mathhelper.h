@@ -397,16 +397,16 @@ namespace NPMathHelper
 
 		inline static Mat4x4 mul(const Mat4x4& m4Left, const Mat4x4& m4Right)
 		{
-			Mat4x4 tRight = transpose(m4Right);
+			Mat4x4 tLeft = transpose(m4Left);
 
-			return Mat4x4(Vec4::dot(m4Left._v40, m4Right._v40), Vec4::dot(m4Left._v40, m4Right._v41), 
-				Vec4::dot(m4Left._v40, m4Right._v42), Vec4::dot(m4Left._v40, m4Right._v43), 
-				Vec4::dot(m4Left._v41, m4Right._v40), Vec4::dot(m4Left._v41, m4Right._v41), 
-				Vec4::dot(m4Left._v41, m4Right._v42), Vec4::dot(m4Left._v41, m4Right._v43), 
-				Vec4::dot(m4Left._v42, m4Right._v40), Vec4::dot(m4Left._v42, m4Right._v41), 
-				Vec4::dot(m4Left._v42, m4Right._v42), Vec4::dot(m4Left._v42, m4Right._v43), 
-				Vec4::dot(m4Left._v43, m4Right._v40), Vec4::dot(m4Left._v43, m4Right._v41), 
-				Vec4::dot(m4Left._v43, m4Right._v42), Vec4::dot(m4Left._v43, m4Right._v43));
+			return Mat4x4(Vec4::dot(tLeft._v40, m4Right._v40), Vec4::dot(tLeft._v40, m4Right._v41), 
+				Vec4::dot(tLeft._v40, m4Right._v42), Vec4::dot(tLeft._v40, m4Right._v43), 
+				Vec4::dot(tLeft._v41, m4Right._v40), Vec4::dot(tLeft._v41, m4Right._v41), 
+				Vec4::dot(tLeft._v41, m4Right._v42), Vec4::dot(tLeft._v41, m4Right._v43), 
+				Vec4::dot(tLeft._v42, m4Right._v40), Vec4::dot(tLeft._v42, m4Right._v41), 
+				Vec4::dot(tLeft._v42, m4Right._v42), Vec4::dot(tLeft._v42, m4Right._v43), 
+				Vec4::dot(tLeft._v43, m4Right._v40), Vec4::dot(tLeft._v43, m4Right._v41), 
+				Vec4::dot(tLeft._v43, m4Right._v42), Vec4::dot(tLeft._v43, m4Right._v43));
 		}
 
 		inline static Mat4x4 Identity()
@@ -420,9 +420,7 @@ namespace NPMathHelper
 		inline static Mat4x4 translation(const Vec3& pos)
 		{
 			Mat4x4 result = Identity();
-			result._30 = pos._x;
-			result._31 = pos._y;
-			result._32 = pos._z;
+			result._v43 = Vec4(pos, 1.0f);
 			return result;
 		}
 
@@ -488,7 +486,7 @@ namespace NPMathHelper
 			result._21 = 2.f * yz + 2.f * xw;
 			result._22 = 1.f - 2.f * x2 - 2.f * y2;
 
-			return transpose(result);
+			return result;
 		}
 
 	protected:
