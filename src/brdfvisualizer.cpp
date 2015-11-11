@@ -49,9 +49,11 @@ BRDFVisualizer::BRDFVisualizer(const char* name, const int sizeW, const int size
 	, m_bIsLoadTexture(false)
 	, m_uiModelWindowID(0)
 	, m_sBRDFFilePath("")
+	, m_sBRDFTextureName("None")
 	, m_uiNPH(64)
 	, m_uiNTH(16)
 	, m_bIsWireFrame(true)
+	, m_bIsSceneGUI(true)
 {
 }
 
@@ -68,16 +70,20 @@ int BRDFVisualizer::OnInit()
 	ATB_ASSERT(TwWindowSize(m_iSizeW, m_iSizeH));
 	TwBar* mainBar = TwNewBar("BRDFVisualizer");
 	ATB_ASSERT(TwDefine(" BRDFVisualizer help='These properties defines the application behavior' "));
-	ATB_ASSERT(TwAddButton(mainBar, "openbrdf", BRDFButton, this, "label='Open BRDF File'"));
+	ATB_ASSERT(TwAddButton(mainBar, "openbrdf", BRDFButton, this, "label='Browse File' group='BRDF File'"));
+	ATB_ASSERT(TwAddVarRO(mainBar, "brdfname", TW_TYPE_STDSTRING, &m_sBRDFTextureName,
+		" label='Loaded BRDF' help='Loaded BRDF' group='BRDF File'"));
 	ATB_ASSERT(TwAddVarRW(mainBar, "n_ph", TW_TYPE_UINT32, &m_uiNPH,
-		" label='BRDF File N_PH' step=1 keyIncr=s keyDecr=S help='N_PH' "));
+		" label='BRDF File N_PH' step=1 keyIncr=s keyDecr=S help='N_PH' group='BRDF File'"));
 	ATB_ASSERT(TwAddVarRW(mainBar, "n_th", TW_TYPE_UINT32, &m_uiNTH,
-		" label='BRDF File N_TH' step=1 keyIncr=d keyDecr=D help='N_TH' "));
-	ATB_ASSERT(TwAddSeparator(mainBar, "brdffilesep", ""));
+		" label='BRDF File N_TH' step=1 keyIncr=d keyDecr=D help='N_TH' group='BRDF File'"));
+	//ATB_ASSERT(TwAddSeparator(mainBar, "brdffilesep", ""));
 	ATB_ASSERT(TwAddVarRW(mainBar, "wireframe", TW_TYPE_BOOLCPP, &m_bIsWireFrame,
-		" label='Show Wireframe' help='Show Wireframe' "));
-	ATB_ASSERT(TwAddSeparator(mainBar, "rendersep", ""));
-	ATB_ASSERT(TwAddButton(mainBar, "showmodelview", ModelButton, this, "label='Show Model View'"));
+		" label='Wireframe' help='Show Wireframe' group='Display'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "scenegui", TW_TYPE_BOOLCPP, &m_bIsSceneGUI,
+		" label='Scene GUI' help='Show Scene GUI' group='Display'"));
+	//ATB_ASSERT(TwAddSeparator(mainBar, "rendersep", ""));
+	ATB_ASSERT(TwAddButton(mainBar, "showmodelview", ModelButton, this, "label='Show View' group='3D Model'"));
 	ATB_ASSERT(TwAddSeparator(mainBar, "modelviewsep", ""));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='LClick+Drag: Rot Light dir'"));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction2", NULL, NULL, "label='RClick+Drag: Rot Camera dir'"));
@@ -142,7 +148,7 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 	proj = glm::perspective(45.0f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
 	view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 	model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-	NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::PerspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+	NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -177,6 +183,7 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 		m_pBRDFVisEffect->deactiveEffect();
 	}
 
+	if (m_bIsSceneGUI)
 	{
 		m_AxisLine[0].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(1.f, 0.f, 0.f), NPGeoHelper::vec3(1.0f, 0.f, 0.f)
 			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
@@ -186,6 +193,7 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
 	}
 
+	if (m_bIsSceneGUI)
 	{
 		glm::vec3 InLineEnd;
 		InLineEnd.y = sin(m_fInYaw) * 10.f;
@@ -220,12 +228,14 @@ void BRDFVisualizer::OnHandleInputMSG(const INPUTMSG &msg)
 	switch (msg.type)
 	{
 	case Window::INPUTMSG_KEYBOARDKEY:
+		if (TwEventCharGLFW(msg.key, msg.action))
+			break;
 		if (msg.key == GLFW_KEY_ESCAPE && msg.action == GLFW_PRESS)
 			glfwSetWindowShouldClose(m_pWindow, GL_TRUE);
-		if (msg.key == GLFW_KEY_O && msg.action == GLFW_PRESS)
-			OpenBRDFData();
-		if (msg.key == GLFW_KEY_M && msg.action == GLFW_PRESS)
-			OpenModelWindow();
+		//if (msg.key == GLFW_KEY_O && msg.action == GLFW_PRESS)
+		//	OpenBRDFData();
+		//if (msg.key == GLFW_KEY_M && msg.action == GLFW_PRESS)
+		//	OpenModelWindow();
 		break;
 	case Window::INPUTMSG_MOUSEKEY:
 		if (TwEventMouseButtonGLFW(msg.key, msg.action))
@@ -265,8 +275,14 @@ void BRDFVisualizer::OpenBRDFData()
 		return;
 	}
 
-	m_sBRDFFilePath = file;
+	m_sBRDFFilePath = m_sBRDFTextureName = file;
 	m_bIsLoadTexture = true;
+
+	ModelViewWindow* modelViewWindow = (ModelViewWindow*)GetOwner()->GetWindow(m_uiModelWindowID);
+	if (modelViewWindow)
+	{
+		modelViewWindow->SetBRDFData(m_sBRDFFilePath.c_str(), m_uiNTH, m_uiNPH);
+	}
 }
 
 void BRDFVisualizer::OpenModelWindow()

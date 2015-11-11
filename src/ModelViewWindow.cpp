@@ -174,6 +174,13 @@ namespace BRDFModel
 	}
 }
 
+void TW_CALL BrowseModelButton(void * window)
+{
+	ModelViewWindow* appWin = (ModelViewWindow*)window;
+	if (appWin)
+		appWin->OpenModelData();
+}
+
 ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int sizeH)
 	: Window(name, sizeW, sizeH)
 	, m_Cam(1.f, 0.f, M_PI * 0.25f)
@@ -190,8 +197,17 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_fZoomSen(0.1f)
 	, m_pBRDFVisEffect(nullptr)
 	, m_bIsLoadTexture(false)
+	, m_sBRDFTextureName("None")
+	, m_bIsLoadModel(false)
+	, m_sModelName("None")
 	, m_pModel(nullptr)
-	, m_v3LightColor(5.f,5.f,5.f)
+	, m_v3LightColor(1.f,1.f,1.f)
+	, m_bIsWireFrame(false)
+	, m_bIsSceneGUI(true)
+	, m_v3ModelPos(0.f, 0.f, 0.f)
+	, m_fModelScale(1.0f)
+	, m_v3ModelRot()
+	, m_fLightIntMultiplier(1.0f)
 {
 }
 
@@ -206,7 +222,40 @@ int ModelViewWindow::OnInit()
 	ATB_ASSERT(TwSetCurrentWindow(m_uiID));
 	ATB_ASSERT(TwWindowSize(m_iSizeW, m_iSizeH));
 	TwBar* mainBar = TwNewBar("ModelView");
-	ATB_ASSERT(TwDefine(" ModelView help='These properties defines the application behavior' "));
+	ATB_ASSERT(TwDefine(" ModelView help='These properties defines the visual appearance of the model' "));
+
+	ATB_ASSERT(TwAddVarRO(mainBar, "brdfname", TW_TYPE_STDSTRING, &m_sBRDFTextureName,
+		" label='Loaded BRDF' help='Loaded BRDF' group='BRDF File'"));
+
+	ATB_ASSERT(TwAddButton(mainBar, "openmodel", BrowseModelButton, this, "label='Browse File' group='Model File'"));
+	ATB_ASSERT(TwAddVarRO(mainBar, "modelname", TW_TYPE_STDSTRING, &m_sModelName,
+		" label='Loaded Model' help='Loaded Model' group='Model File'"));
+
+	ATB_ASSERT(TwAddVarRW(mainBar, "wireframe", TW_TYPE_BOOLCPP, &m_bIsWireFrame,
+		" label='Wireframe' help='Show Wireframe' group='Display'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "scenegui", TW_TYPE_BOOLCPP, &m_bIsSceneGUI,
+		" label='Scene GUI' help='Show Scene GUI' group='Display'"));
+
+	ATB_ASSERT(TwAddVarRW(mainBar, "PosX", TW_TYPE_FLOAT, &m_v3ModelPos._x,
+		" label='Pos X' help='Model Translation' group='Model'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "PosY", TW_TYPE_FLOAT, &m_v3ModelPos._y,
+		" label='Pos Y' help='Model Translation' group='Model'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "PosZ", TW_TYPE_FLOAT, &m_v3ModelPos._z,
+		" label='Pos Z' help='Model Translation' group='Model'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Rotation", TW_TYPE_QUAT4F, &m_v3ModelRot._e[0],
+		" label='Rotation' help='Model Rotation' group='Model' "));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Scale", TW_TYPE_FLOAT, &m_fModelScale,
+		" label='Scale' help='Model Scale' group='Model' step=0.1"));
+
+	ATB_ASSERT(TwAddVarRW(mainBar, "Color", TW_TYPE_COLOR3F, &m_v3LightColor, " group='Directional Light' "));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Intensity Multiplier", TW_TYPE_FLOAT, &m_fLightIntMultiplier,
+		" label='Intensity Multiplier' help='Multiply light color' group='Directional Light' step=0.1"));
+	//ATB_ASSERT(TwAddVarRW(mainBar, "Direction", TW_TYPE_DIR3F, &m_f3LightDir, " group='Directional Light' "));
+
+	ATB_ASSERT(TwAddSeparator(mainBar, "instructionsep", ""));
+	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='LClick+Drag: Rot Light dir'"));
+	ATB_ASSERT(TwAddButton(mainBar, "instruction2", NULL, NULL, "label='RClick+Drag: Rot Camera dir'"));
+	ATB_ASSERT(TwAddButton(mainBar, "instruction3", NULL, NULL, "label='Scroll: Zoom Camera in/out'"));
 
 	m_AxisLine[0].Init(m_pShareContent);
 	m_AxisLine[1].Init(m_pShareContent);
@@ -227,7 +276,7 @@ int ModelViewWindow::OnInit()
 	glCullFace(GL_BACK);
 	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	OpenModelData();
+	//OpenModelData();
 
 	return 0;
 }
@@ -250,7 +299,7 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		while (m_fInPitch < 0) m_fInPitch = m_fInPitch + M_PI * 2.f;
 		while (m_fInPitch > M_PI * 2.f) m_fInPitch -= M_PI * 2.f;
 	}
-	if (abs(m_fScrollY) > 1E-9)
+	if (abs(m_fScrollY) > M_EPSILON)
 	{
 		float curZoom = m_Cam.GetRadius();
 		curZoom += m_fScrollY * m_fZoomSen;
@@ -266,15 +315,24 @@ int ModelViewWindow::OnTick(const float deltaTime)
 	view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
 	model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 1.0f, 0.0f));
 	tranInvModel = glm::transpose(glm::inverse(model));
-	NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::PerspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+	NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+	NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+		,NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+		,NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+	NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	if (m_bIsWireFrame)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	else
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	UpdateBRDFData();
 	if (/*m_bIsLoadTexture &&*/ m_pModel)
 	{
-		UpdateBRDFData();
-
 		m_pBRDFVisEffect->activeEffect();
 		m_pBRDFVisEffect->SetInt("n_th", m_uiNTH);
 		m_pBRDFVisEffect->SetInt("n_ph", m_uiNPH);
@@ -282,15 +340,17 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		//m_pBRDFVisEffect->SetMatrix("projection", glm::value_ptr(proj));
 		m_pBRDFVisEffect->SetMatrix("view", m_Cam.GetViewMatrix());
 		//m_pBRDFVisEffect->SetMatrix("view", glm::value_ptr(view));
-		m_pBRDFVisEffect->SetMatrix("model", glm::value_ptr(model));
-		m_pBRDFVisEffect->SetMatrix("tranInvModel", glm::value_ptr(tranInvModel));
-
+		//m_pBRDFVisEffect->SetMatrix("model", glm::value_ptr(model));
+		//m_pBRDFVisEffect->SetMatrix("tranInvModel", glm::value_ptr(tranInvModel));
+		m_pBRDFVisEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pBRDFVisEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
 		glm::vec3 lightDir;
 		lightDir.y = -sin(m_fInYaw);
 		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
 		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
 		m_pBRDFVisEffect->SetVec3("lightDir", lightDir.x, lightDir.y, lightDir.z);
-		m_pBRDFVisEffect->SetVec3("lightColor", m_v3LightColor.x, m_v3LightColor.y, m_v3LightColor.z);
+		m_pBRDFVisEffect->SetVec3("lightColor", m_v3LightColor.x * m_fLightIntMultiplier
+			, m_v3LightColor.y * m_fLightIntMultiplier, m_v3LightColor.z * m_fLightIntMultiplier);
 		glm::vec3 camDir = m_Cam.GetDir();
 		m_pBRDFVisEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
 
@@ -305,6 +365,12 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		m_pBRDFVisEffect->deactiveEffect();
 	}
 
+	if (m_bIsWireFrame)
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+
+	if (m_bIsSceneGUI)
 	{
 		m_AxisLine[0].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(1.f, 0.f, 0.f), NPGeoHelper::vec3(1.0f, 0.f, 0.f)
 			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
@@ -314,6 +380,7 @@ int ModelViewWindow::OnTick(const float deltaTime)
 			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
 	}
 
+	if (m_bIsSceneGUI)
 	{
 		glm::vec3 InLineEnd;
 		InLineEnd.y = sin(m_fInYaw) * 10.f;
@@ -343,10 +410,12 @@ void ModelViewWindow::OnHandleInputMSG(const INPUTMSG &msg)
 	switch (msg.type)
 	{
 	case Window::INPUTMSG_KEYBOARDKEY:
+		if (TwEventCharGLFW(msg.key, msg.action))
+			break;
 		if (msg.key == GLFW_KEY_ESCAPE && msg.action == GLFW_PRESS)
 			glfwSetWindowShouldClose(m_pWindow, GL_TRUE);
-		if (msg.key == GLFW_KEY_O && msg.action == GLFW_PRESS)
-			OpenModelData();
+		//if (msg.key == GLFW_KEY_O && msg.action == GLFW_PRESS)
+		//	OpenModelData();
 		break;
 	case Window::INPUTMSG_MOUSEKEY:
 		if (TwEventMouseButtonGLFW(msg.key, msg.action))
@@ -391,6 +460,8 @@ void ModelViewWindow::OpenModelData()
 		NPOSHelper::CreateMessageBox(message.c_str(), "Load BRDF Data Failure", NPOSHelper::MSGBOX_OK);
 		return;
 	}
+	m_sModelName = file.c_str();
+	m_bIsLoadModel = true;
 }
 
 void ModelViewWindow::SetBRDFData(const char* path, unsigned int n_th, unsigned int n_ph)
@@ -430,5 +501,6 @@ void ModelViewWindow::UpdateBRDFData()
 		m_uiNTH = m_uiNewTH;
 		m_uiNPH = m_uiNewPH;
 		m_bIsLoadTexture = true;
+		m_sBRDFTextureName = m_sNewBRDFPath;
 	}
 }

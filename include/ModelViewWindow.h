@@ -11,6 +11,23 @@
 
 namespace BRDFModel
 {
+	struct SphericalSpace {
+		glm::vec3 m_v3Center;
+		float m_fRadius;
+
+		SphericalSpace Merge(const SphericalSpace &other)
+		{
+			SphericalSpace result;
+			glm::vec3 toOther = other.m_v3Center - m_v3Center;
+			float lenToOther = glm::length(toOther);
+			float maxForward = glm::max(m_fRadius, other.m_fRadius + lenToOther);
+			float maxBackward = glm::max(m_fRadius, other.m_fRadius - lenToOther);
+			glm::vec3 toOtherDir = glm::normalize(toOther);
+			result.m_fRadius = (maxForward + maxBackward) * 0.5f;
+			result.m_v3Center = m_v3Center + toOtherDir * (maxForward - maxBackward * 0.5f);
+			return result;
+		}
+	};
 	struct Vertex {
 		NPMathHelper::Vec3 position;
 		NPMathHelper::Vec3 normal;
@@ -56,6 +73,8 @@ namespace BRDFModel
 		GLuint m_iVBO;
 		GLuint m_iEBO;
 
+		SphericalSpace m_space;
+
 		void SetupMesh();
 	};
 
@@ -82,6 +101,8 @@ namespace BRDFModel
 
 		std::vector<Mesh*> m_meshes;
 		std::string m_sDirectory;
+
+		SphericalSpace m_space;
 	};
 }
 
@@ -107,15 +128,23 @@ protected:
 	unsigned int m_uiNewTH;
 	unsigned int m_uiNewPH;
 
-	GLuint m_iBRDFEstTex;
+	bool m_bIsLoadModel;
 	BRDFModel::Model* m_pModel;
+	std::string m_sModelName;
+
 	bool m_bIsLoadTexture;
+	GLuint m_iBRDFEstTex;
+	std::string m_sBRDFTextureName;
+
 	NPGLHelper::Effect* m_pBRDFVisEffect;
 	NPGLHelper::RenderObject testObject;
 	NPCamHelper::RotateCamera m_Cam;
 
+	bool m_bIsWireFrame;
+	bool m_bIsSceneGUI;
 	unsigned int m_uiNTH, m_uiNPH;
 	glm::vec3 m_v3LightColor;
+	float m_fLightIntMultiplier;
 	bool m_bIsCamRotate, m_bIsInRotate;
 	float m_fCamSenX, m_fCamSenY;
 	float m_fInSenX, m_fInSenY;
@@ -126,6 +155,11 @@ protected:
 	glm::vec2 m_v2CurrentCursorPos;
 	NPGLHelper::DebugLine m_InLine;
 	NPGLHelper::DebugLine m_AxisLine[3];
+
+	//Model
+	NPMathHelper::Vec3 m_v3ModelPos;
+	float m_fModelScale;
+	NPMathHelper::Quat m_v3ModelRot;
 };
 
 #endif

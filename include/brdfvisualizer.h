@@ -24,11 +24,13 @@ public:
 protected:
 	GLuint m_iBRDFEstTex;
 	bool m_bIsLoadTexture;
+	std::string m_sBRDFTextureName;
 	NPGLHelper::Effect* m_pBRDFVisEffect;
 	NPGLHelper::RenderObject testObject;
 	NPCamHelper::RotateCamera m_Cam;
 
 	bool m_bIsWireFrame;
+	bool m_bIsSceneGUI;
 	bool m_bIsCamRotate, m_bIsInRotate;
 	float m_fCamSenX, m_fCamSenY;
 	float m_fInSenX, m_fInSenY;

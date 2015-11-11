@@ -99,8 +99,8 @@ namespace NPCamHelper
 			float camZ = temp * cos(m_fPitch);
 			float camX = temp * sin(m_fPitch);
 
-			m_m4ViewMat = glm::lookAt(m_v3CamTarget + glm::vec3(camX, camY, camZ), m_v3CamTarget, m_v3CamUp);
-			m_m4ViewMat2 = NPMathHelper::Mat4x4::LookAt(
+			//m_m4ViewMat = glm::lookAt(m_v3CamTarget + glm::vec3(camX, camY, camZ), m_v3CamTarget, m_v3CamUp);
+			m_m4ViewMat2 = NPMathHelper::Mat4x4::lookAt(
 				NPMathHelper::Vec3(m_v3CamTarget.x + camX, m_v3CamTarget.y + camY, m_v3CamTarget.z + camZ), NPMathHelper::Vec3(m_v3CamTarget.x, m_v3CamTarget.y, m_v3CamTarget.z), NPMathHelper::Vec3(m_v3CamUp.x, m_v3CamUp.y, m_v3CamUp.z));
 		}
 
@@ -111,8 +111,8 @@ namespace NPCamHelper
 				UpdateViewMatrix();
 				m_bIsViewMatDirty = false;
 			}
-			//return m_m4ViewMat2.GetDataColumnMajor();
-			return glm::value_ptr(m_m4ViewMat); 
+			return m_m4ViewMat2.GetDataColumnMajor();
+			//return glm::value_ptr(m_m4ViewMat); 
 		}
 
 	protected:
