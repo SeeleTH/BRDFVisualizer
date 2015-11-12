@@ -5,15 +5,6 @@
 
 namespace NPGeoHelper
 {
-	bool operator == (const vec3& lhs, const vec3& rhs)
-	{
-		return (lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z);
-	}
-	bool operator != (const vec3& lhs, const vec3& rhs)
-	{
-		return !(lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z);
-	}
-
 	Geometry GetSlicedHemisphereShape(const float radius, const unsigned int vertSlice, unsigned int horiSlice)
 	{
 		Geometry result;
@@ -32,23 +23,23 @@ namespace NPGeoHelper
 				float z = sin(angle) * wide;
 
 				vertex vert;
-				vert.pos = vec3(x, y, z);
-				vert.norm = vert.pos.normalize();
-				vert.binorm = vert.norm.cross(vec3(0.f,1.f,0.f)).normalize();
-				vert.tan = vert.norm.cross(vert.binorm).normalize();
-				vert.tex.x = (float)h / (float)(horiSlice);
-				vert.tex.y = (float)v / (float)(vertSlice);
+				vert.pos = NPMathHelper::Vec3(x, y, z);
+				vert.norm = NPMathHelper::Vec3::normalize(vert.pos);
+				vert.binorm = NPMathHelper::Vec3::normalize(NPMathHelper::Vec3::cross(vert.norm,(NPMathHelper::Vec3(0.f, 1.f, 0.f))));
+				vert.tan = NPMathHelper::Vec3::normalize(vert.binorm);
+				vert.tex._x = (float)h / (float)(horiSlice);
+				vert.tex._y = (float)v / (float)(vertSlice);
 				result.vertices.push_back(vert);
 			}
 		}
 		//last
 		{
 			vertex vert;
-			vert.pos = vec3(0.f, radius, 0.f);
-			vert.norm = vec3(0.f, 1, 0.f);
-			vert.binorm = vec3(1.f, 0.f, 0.f);
-			vert.tan = vec3(0.f, 0.f, 1.f);
-			vert.tex = vec2(1.f, 1.f);
+			vert.pos = NPMathHelper::Vec3(0.f, radius, 0.f);
+			vert.norm = NPMathHelper::Vec3(0.f, 1, 0.f);
+			vert.binorm = NPMathHelper::Vec3(1.f, 0.f, 0.f);
+			vert.tan = NPMathHelper::Vec3(0.f, 0.f, 1.f);
+			vert.tex = NPMathHelper::Vec2(1.f, 1.f);
 			result.vertices.push_back(vert);
 		}
 
@@ -93,6 +84,20 @@ namespace NPGeoHelper
 				result.indices.push_back(vertSlice * (horiSlice + 1));
 			}
 		}
+
+		return result;
+	}
+
+	Geometry GetPlaneShape(const float width, const float height, const NPMathHelper::Vec3 normDir)
+	{
+		Geometry result;
+
+		return result;
+	}
+
+	Geometry GetBoxShape(const float width, const float height, const float depth)
+	{
+		Geometry result;
 
 		return result;
 	}

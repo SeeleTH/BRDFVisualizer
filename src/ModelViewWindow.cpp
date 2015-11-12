@@ -174,12 +174,40 @@ namespace BRDFModel
 	}
 }
 
-void TW_CALL BrowseModelButton(void * window)
+void TW_CALL BrowseModelButton(void* window)
 {
 	ModelViewWindow* appWin = (ModelViewWindow*)window;
 	if (appWin)
 		appWin->OpenModelData();
 }
+
+struct CUBEMAPLOADCMD{
+	ModelViewWindow* win;
+	unsigned int side;
+	CUBEMAPLOADCMD(ModelViewWindow* w, unsigned int s) : win(w), side(s) {}
+};
+void TW_CALL BrowseCubemapButton(void* content)
+{
+	CUBEMAPLOADCMD* cmd = (CUBEMAPLOADCMD*)content;
+	if (!cmd)
+		return;
+	if (cmd && cmd->win)
+	{
+		cmd->win->SetCubemap(cmd->side);
+	}
+	if (content)
+	{
+		delete content;
+	}
+}
+
+void TW_CALL LoadCubemapButton(void* window)
+{
+	ModelViewWindow* appWin = (ModelViewWindow*)window;
+	if (appWin)
+		appWin->LoadCubemap();
+}
+
 
 ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int sizeH)
 	: Window(name, sizeW, sizeH)
@@ -208,6 +236,9 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_fModelScale(1.0f)
 	, m_v3ModelRot()
 	, m_fLightIntMultiplier(1.0f)
+	, m_bIsEnvMapDirty(true)
+	, m_bIsEnvMapLoaded(false)
+	, m_uiEnvMap(0)
 {
 }
 
@@ -251,6 +282,22 @@ int ModelViewWindow::OnInit()
 	ATB_ASSERT(TwAddVarRW(mainBar, "Intensity Multiplier", TW_TYPE_FLOAT, &m_fLightIntMultiplier,
 		" label='Intensity Multiplier' help='Multiply light color' group='Directional Light' step=0.1"));
 	//ATB_ASSERT(TwAddVarRW(mainBar, "Direction", TW_TYPE_DIR3F, &m_f3LightDir, " group='Directional Light' "));
+
+	std::string facename[] = {"Right", "Left", "Top", "Bottom", "Back", "Front"};
+	for (unsigned int i = 0; i < 6; i++)
+	{
+		std::string bName = "openenvmap" + i;
+		std::string vName = "envmaplabel" + i;
+		std::string bPara = "label='Browse " + facename[i] + " Map' group='Environment Map'";
+		std::string vPara = "label='" + facename[i] + " Map' group='Environment Map'";
+		ATB_ASSERT(TwAddButton(mainBar, bName.c_str(), BrowseCubemapButton, new CUBEMAPLOADCMD(this, i), bPara.c_str()));
+		ATB_ASSERT(TwAddVarRW(mainBar, vName.c_str(), TW_TYPE_STDSTRING, &m_sEnvMapNames[i], vPara.c_str()));
+	}
+	ATB_ASSERT(TwAddSeparator(mainBar, "envmapsep", "group='Environment Map'"));
+	ATB_ASSERT(TwAddVarRO(mainBar, "isDirty", TW_TYPE_BOOLCPP, &m_bIsEnvMapDirty,
+		" label='Not loaded yet' help='Loaded Model' group='Environment Map'"));
+	ATB_ASSERT(TwAddButton(mainBar, "loadenvmap"
+		, LoadCubemapButton, this, "label='Load Map' group='Environment Map'"));
 
 	ATB_ASSERT(TwAddSeparator(mainBar, "instructionsep", ""));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='LClick+Drag: Rot Light dir'"));
@@ -372,11 +419,11 @@ int ModelViewWindow::OnTick(const float deltaTime)
 
 	if (m_bIsSceneGUI)
 	{
-		m_AxisLine[0].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(1.f, 0.f, 0.f), NPGeoHelper::vec3(1.0f, 0.f, 0.f)
+		m_AxisLine[0].Draw(NPMathHelper::Vec3(), NPMathHelper::Vec3(1.f, 0.f, 0.f), NPMathHelper::Vec3(1.0f, 0.f, 0.f)
 			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
-		m_AxisLine[1].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(0.f, 1.f, 0.f), NPGeoHelper::vec3(0.0f, 1.f, 0.f)
+		m_AxisLine[1].Draw(NPMathHelper::Vec3(), NPMathHelper::Vec3(0.f, 1.f, 0.f), NPMathHelper::Vec3(0.0f, 1.f, 0.f)
 			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
-		m_AxisLine[2].Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(0.f, 0.f, 1.f), NPGeoHelper::vec3(0.0f, 0.f, 1.f)
+		m_AxisLine[2].Draw(NPMathHelper::Vec3(), NPMathHelper::Vec3(0.f, 0.f, 1.f), NPMathHelper::Vec3(0.0f, 0.f, 1.f)
 			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
 	}
 
@@ -386,7 +433,7 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		InLineEnd.y = sin(m_fInYaw) * 10.f;
 		InLineEnd.x = cos(m_fInYaw) * sin(m_fInPitch) * 10.f;
 		InLineEnd.z = cos(m_fInYaw) * cos(m_fInPitch) * 10.f;
-		m_InLine.Draw(NPGeoHelper::vec3(), NPGeoHelper::vec3(InLineEnd.x, InLineEnd.y, InLineEnd.z), NPGeoHelper::vec3(1.0f, 1.f, 1.f)
+		m_InLine.Draw(NPMathHelper::Vec3(), NPMathHelper::Vec3(InLineEnd.x, InLineEnd.y, InLineEnd.z), NPMathHelper::Vec3(1.0f, 1.f, 1.f)
 			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
 	}
 
@@ -435,6 +482,9 @@ void ModelViewWindow::OnHandleInputMSG(const INPUTMSG &msg)
 		m_v2CurrentCursorPos.y = msg.ypos;
 		break;
 	case Window::INPUTMSG_MOUSESCROLL:
+		m_iScrollingTemp += msg.yoffset;
+		if (TwEventMouseWheelGLFW(m_iScrollingTemp))
+			break;
 		m_fScrollY = msg.yoffset;
 		break;
 	}
@@ -470,6 +520,31 @@ void ModelViewWindow::SetBRDFData(const char* path, unsigned int n_th, unsigned 
 	m_sNewBRDFPath = path;
 	m_uiNewTH = n_th;
 	m_uiNewPH = n_ph;
+}
+
+
+void ModelViewWindow::SetCubemap(unsigned int side)
+{
+	assert(side < 6);
+	std::string file = NPOSHelper::BrowseFile("All\0*.*\0Text\0*.TXT\0");
+	if (file.empty())
+		return;
+	m_bIsEnvMapDirty = true;
+	m_sEnvMapNames[side] = file;
+}
+
+void ModelViewWindow::LoadCubemap()
+{
+	for (auto &facename : m_sEnvMapNames)
+		if (facename.size() <= 0)
+			return;
+
+	if (m_bIsEnvMapLoaded)
+		glDeleteTextures(1, &m_uiEnvMap);
+
+	NPGLHelper::loadCubemapFromFiles(m_sEnvMapNames, m_uiEnvMap);
+	m_bIsEnvMapDirty = false;
+	m_bIsEnvMapLoaded = true;
 }
 
 void ModelViewWindow::UpdateBRDFData()

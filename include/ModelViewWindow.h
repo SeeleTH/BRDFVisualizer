@@ -120,46 +120,64 @@ public:
 	void OpenModelData();
 	void SetBRDFData(const char* path, unsigned int n_th, unsigned int n_ph);
 
+	void SetCubemap(unsigned int side);
+	void LoadCubemap();
+
 protected:
 	void UpdateBRDFData();
 
+	// BRDF
 	bool m_bIsBRDFUpdated;
 	std::string m_sNewBRDFPath;
 	unsigned int m_uiNewTH;
 	unsigned int m_uiNewPH;
-
-	bool m_bIsLoadModel;
-	BRDFModel::Model* m_pModel;
-	std::string m_sModelName;
-
+	unsigned int m_uiNTH, m_uiNPH;
 	bool m_bIsLoadTexture;
 	GLuint m_iBRDFEstTex;
 	std::string m_sBRDFTextureName;
+
+	// Model
+	bool m_bIsLoadModel;
+	BRDFModel::Model* m_pModel;
+	std::string m_sModelName;
 
 	NPGLHelper::Effect* m_pBRDFVisEffect;
 	NPGLHelper::RenderObject testObject;
 	NPCamHelper::RotateCamera m_Cam;
 
+	// Display Options
 	bool m_bIsWireFrame;
 	bool m_bIsSceneGUI;
-	unsigned int m_uiNTH, m_uiNPH;
+	NPGLHelper::DebugLine m_InLine;
+	NPGLHelper::DebugLine m_AxisLine[3];
+
+	// Light
 	glm::vec3 m_v3LightColor;
 	float m_fLightIntMultiplier;
-	bool m_bIsCamRotate, m_bIsInRotate;
-	float m_fCamSenX, m_fCamSenY;
 	float m_fInSenX, m_fInSenY;
 	float m_fInPitch, m_fInYaw;
+
+	// Env Map
+	bool m_bIsEnvMapLoaded;
+	bool m_bIsEnvMapDirty;
+	std::string m_sEnvMapNames[6];
+	GLuint m_uiEnvMap;
+
+	// Camera Control
+	bool m_bIsCamRotate, m_bIsInRotate;
+	float m_fCamSenX, m_fCamSenY;
 	float m_fZoomSen, m_fScrollY;
 	float m_fZoomMin, m_fZoomMax;
 	glm::vec2 m_v2LastCursorPos;
 	glm::vec2 m_v2CurrentCursorPos;
-	NPGLHelper::DebugLine m_InLine;
-	NPGLHelper::DebugLine m_AxisLine[3];
 
 	//Model
 	NPMathHelper::Vec3 m_v3ModelPos;
 	float m_fModelScale;
 	NPMathHelper::Quat m_v3ModelRot;
+
+	//AntTweakBar
+	int m_iScrollingTemp;
 };
 
 #endif

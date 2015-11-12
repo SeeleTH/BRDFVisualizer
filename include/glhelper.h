@@ -30,6 +30,7 @@ namespace NPGLHelper
 	bool checkProgramError(GLuint program, GLuint checking, std::string &info);
 
 	bool loadTextureFromFile(const char* path, GLuint &id, GLint warpS, GLint warpT, GLint minFil, GLint maxFil);
+	bool loadCubemapFromFiles(std::string faces[6], GLuint &id);
 
 
 	class RenderObject
@@ -260,14 +261,14 @@ namespace NPGLHelper
 		DebugLine();
 		~DebugLine();
 		void Init(ShareContent* content);
-		void Draw(const NPGeoHelper::vec3& start, const NPGeoHelper::vec3& end, const NPGeoHelper::vec3& color
+		void Draw(const NPMathHelper::Vec3& start, const NPMathHelper::Vec3& end, const NPMathHelper::Vec3& color
 			, const float* viewMat, const float* projMat);
 	protected:
 		void UpdateBuffer();
 
-		NPGeoHelper::vec3 m_v3Start;
-		NPGeoHelper::vec3 m_v3End;
-		NPGeoHelper::vec3 m_v3Color;
+		NPMathHelper::Vec3 m_v3Start;
+		NPMathHelper::Vec3 m_v3End;
+		NPMathHelper::Vec3 m_v3Color;
 		Effect* m_pEffect;
 
 		GLuint m_iVAO;

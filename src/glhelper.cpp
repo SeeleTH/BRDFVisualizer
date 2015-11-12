@@ -110,6 +110,37 @@ namespace NPGLHelper
 		return true;
 	}
 
+	bool loadCubemapFromFiles(std::string faces[6], GLuint &id)
+	{
+		glGenTextures(1, &id);
+		glActiveTexture(GL_TEXTURE0);
+
+		int width, height;
+		unsigned char* image;
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, id);
+		for (unsigned int i = 0; i < 6; i++)
+		{
+			image = SOIL_load_image(faces[i].c_str(), &width, &height, 0, SOIL_LOAD_RGB); 
+			if (!image)
+			{
+				return false;
+			}
+			glTexImage2D(
+				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
+				GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+			SOIL_free_image_data(image);
+		}
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+		return true;
+	}
+
 	RenderObject::RenderObject()
 		: m_iVAO(-1)
 		, m_iVBO(-1)
@@ -129,11 +160,11 @@ namespace NPGLHelper
 		std::vector<GLfloat> vertices;
 		for (auto it = geo.vertices.begin(); it != geo.vertices.end(); it++)
 		{
-			vertices.push_back(it->pos.x);
-			vertices.push_back(it->pos.y);
-			vertices.push_back(it->pos.z);
-			vertices.push_back(it->tex.x);
-			vertices.push_back(it->tex.y);
+			vertices.push_back(it->pos._x);
+			vertices.push_back(it->pos._y);
+			vertices.push_back(it->pos._z);
+			vertices.push_back(it->tex._x);
+			vertices.push_back(it->tex._y);
 		}
 
 		m_iIndicesSize = geo.indices.size();
@@ -660,7 +691,7 @@ namespace NPGLHelper
 		glBindVertexArray(0);
 	}
 
-	void DebugLine::Draw(const NPGeoHelper::vec3& start, const NPGeoHelper::vec3& end, const NPGeoHelper::vec3& color
+	void DebugLine::Draw(const NPMathHelper::Vec3& start, const NPMathHelper::Vec3& end, const NPMathHelper::Vec3& color
 		, const float* viewMat, const float* projMat)
 	{
 		if (start != m_v3Start || end != m_v3End || color != m_v3Color)
@@ -688,18 +719,18 @@ namespace NPGLHelper
 	void DebugLine::UpdateBuffer()
 	{
 		std::vector<GLfloat> vertices;
-		vertices.push_back(m_v3Start.x);
-		vertices.push_back(m_v3Start.y);
-		vertices.push_back(m_v3Start.z);
-		vertices.push_back(m_v3Color.x);
-		vertices.push_back(m_v3Color.y);
-		vertices.push_back(m_v3Color.z);
-		vertices.push_back(m_v3End.x);
-		vertices.push_back(m_v3End.y);
-		vertices.push_back(m_v3End.z);
-		vertices.push_back(m_v3Color.x);
-		vertices.push_back(m_v3Color.y);
-		vertices.push_back(m_v3Color.z);
+		vertices.push_back(m_v3Start._x);
+		vertices.push_back(m_v3Start._y);
+		vertices.push_back(m_v3Start._z);
+		vertices.push_back(m_v3Color._x);
+		vertices.push_back(m_v3Color._y);
+		vertices.push_back(m_v3Color._z);
+		vertices.push_back(m_v3End._x);
+		vertices.push_back(m_v3End._y);
+		vertices.push_back(m_v3End._z);
+		vertices.push_back(m_v3Color._x);
+		vertices.push_back(m_v3Color._y);
+		vertices.push_back(m_v3Color._z);
 
 		glBindBuffer(GL_ARRAY_BUFFER, m_iVBO);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
