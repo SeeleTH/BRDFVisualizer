@@ -159,6 +159,8 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
     <None Include="..\shader\debugLineVS.glsl" />
     <None Include="..\shader\BRDFVisualizePS.glsl" />
     <None Include="..\shader\BRDFVisualizeVS.glsl" />
+    <None Include="..\shader\SkyboxPS.glsl" />
+    <None Include="..\shader\SkyboxVS.glsl" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

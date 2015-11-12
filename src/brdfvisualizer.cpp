@@ -64,7 +64,6 @@ BRDFVisualizer::~BRDFVisualizer()
 int BRDFVisualizer::OnInit()
 {
 	// AntTweakBar Init
-	//ATB_ASSERT(TwInit(TW_OPENGL_CORE, nullptr));
 	ATB_ASSERT(NPTwInit(m_uiID, TW_OPENGL_CORE, nullptr));
 	ATB_ASSERT(TwSetCurrentWindow(m_uiID));
 	ATB_ASSERT(TwWindowSize(m_iSizeW, m_iSizeH));
@@ -77,12 +76,10 @@ int BRDFVisualizer::OnInit()
 		" label='BRDF File N_PH' step=1 keyIncr=s keyDecr=S help='N_PH' group='BRDF File'"));
 	ATB_ASSERT(TwAddVarRW(mainBar, "n_th", TW_TYPE_UINT32, &m_uiNTH,
 		" label='BRDF File N_TH' step=1 keyIncr=d keyDecr=D help='N_TH' group='BRDF File'"));
-	//ATB_ASSERT(TwAddSeparator(mainBar, "brdffilesep", ""));
 	ATB_ASSERT(TwAddVarRW(mainBar, "wireframe", TW_TYPE_BOOLCPP, &m_bIsWireFrame,
 		" label='Wireframe' help='Show Wireframe' group='Display'"));
 	ATB_ASSERT(TwAddVarRW(mainBar, "scenegui", TW_TYPE_BOOLCPP, &m_bIsSceneGUI,
 		" label='Scene GUI' help='Show Scene GUI' group='Display'"));
-	//ATB_ASSERT(TwAddSeparator(mainBar, "rendersep", ""));
 	ATB_ASSERT(TwAddButton(mainBar, "showmodelview", ModelButton, this, "label='Show View' group='3D Model'"));
 	ATB_ASSERT(TwAddSeparator(mainBar, "modelviewsep", ""));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='LClick+Drag: Rot Light dir'"));
@@ -108,8 +105,6 @@ int BRDFVisualizer::OnInit()
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-
-	//OpenBRDFData();
 
 	return 0;
 }
@@ -164,17 +159,12 @@ int BRDFVisualizer::OnTick(const float deltaTime)
 		m_pBRDFVisEffect->SetFloat("i_yaw", m_fInYaw);
 		m_pBRDFVisEffect->SetFloat("i_pitch", m_fInPitch);
 		m_pBRDFVisEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
-		//m_pBRDFVisEffect->SetMatrix("projection", glm::value_ptr(proj));
 		m_pBRDFVisEffect->SetMatrix("view", m_Cam.GetViewMatrix());
-		//m_pBRDFVisEffect->SetMatrix("view", glm::value_ptr(view));
 		m_pBRDFVisEffect->SetMatrix("model", glm::value_ptr(model));
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
 		m_pBRDFVisEffect->SetInt("brdfTexture", 0);
-		//glActiveTexture(GL_TEXTURE1);
-		//glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-		//m_pBRDFVisEffect->SetInt("dTexture", 1);
 
 		glBindVertexArray(testObject.GetVAO());
 		glDrawElements(GL_TRIANGLES, testObject.GetIndicesSize(), GL_UNSIGNED_INT, 0);

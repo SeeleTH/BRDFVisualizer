@@ -239,6 +239,7 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_bIsEnvMapDirty(true)
 	, m_bIsEnvMapLoaded(false)
 	, m_uiEnvMap(0)
+	, m_pSkyboxEffect(nullptr)
 {
 }
 
@@ -318,12 +319,20 @@ int ModelViewWindow::OnInit()
 		m_pBRDFVisEffect->linkEffect();
 	}
 
+	m_pSkyboxEffect = m_pShareContent->GetEffect("SkyboxEffect");
+	if (!m_pSkyboxEffect->GetIsLinked())
+	{
+		m_pSkyboxEffect->initEffect();
+		m_pSkyboxEffect->attachShaderFromFile("..\\shader\\SkyboxVS.glsl", GL_VERTEX_SHADER);
+		m_pSkyboxEffect->attachShaderFromFile("..\\shader\\SkyboxPS.glsl", GL_FRAGMENT_SHADER);
+		m_pSkyboxEffect->linkEffect();
+	}
+
+	m_skybox.SetGeometry(NPGeoHelper::GetBoxShape(1.f, 1.f, 1.f));
+
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-	//glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	//OpenModelData();
 
 	return 0;
 }
@@ -357,17 +366,11 @@ int ModelViewWindow::OnTick(const float deltaTime)
 	m_v2LastCursorPos = m_v2CurrentCursorPos;
 	// Camera control - end
 
-	glm::mat4 proj, view, model, tranInvModel;
-	proj = glm::perspective(45.0f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
-	view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-	model = glm::rotate(model, 0.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-	tranInvModel = glm::transpose(glm::inverse(model));
 	NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
 	NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
 		,NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
 		,NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
 	NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
-
 
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -384,17 +387,15 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		m_pBRDFVisEffect->SetInt("n_th", m_uiNTH);
 		m_pBRDFVisEffect->SetInt("n_ph", m_uiNPH);
 		m_pBRDFVisEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
-		//m_pBRDFVisEffect->SetMatrix("projection", glm::value_ptr(proj));
 		m_pBRDFVisEffect->SetMatrix("view", m_Cam.GetViewMatrix());
-		//m_pBRDFVisEffect->SetMatrix("view", glm::value_ptr(view));
-		//m_pBRDFVisEffect->SetMatrix("model", glm::value_ptr(model));
-		//m_pBRDFVisEffect->SetMatrix("tranInvModel", glm::value_ptr(tranInvModel));
 		m_pBRDFVisEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
 		m_pBRDFVisEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+
 		glm::vec3 lightDir;
 		lightDir.y = -sin(m_fInYaw);
 		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
 		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
+
 		m_pBRDFVisEffect->SetVec3("lightDir", lightDir.x, lightDir.y, lightDir.z);
 		m_pBRDFVisEffect->SetVec3("lightColor", m_v3LightColor.x * m_fLightIntMultiplier
 			, m_v3LightColor.y * m_fLightIntMultiplier, m_v3LightColor.z * m_fLightIntMultiplier);
@@ -409,6 +410,11 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		}
 
 		m_pModel->Draw(*m_pBRDFVisEffect);
+
+		glBindVertexArray(m_skybox.GetVAO());
+		glDrawElements(GL_TRIANGLES, m_skybox.GetIndicesSize(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+
 		m_pBRDFVisEffect->deactiveEffect();
 	}
 
@@ -417,14 +423,31 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 
+	if (m_bIsEnvMapLoaded)
+	{
+		//m_pSkyboxEffect->activeEffect();
+		//m_pSkyboxEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		//m_pSkyboxEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		//m_pSkyboxEffect->SetMatrix("model", glm::value_ptr(model));
+
+		//glActiveTexture(GL_TEXTURE0);
+		//glBindTexture(GL_TEXTURE_2D, m_uiEnvMap);
+		//m_pSkyboxEffect->SetInt("envmap", 0);
+
+		//glBindVertexArray(m_skybox.GetVAO());
+		//glDrawElements(GL_TRIANGLES, m_skybox.GetIndicesSize(), GL_UNSIGNED_INT, 0);
+		//glBindVertexArray(0);
+		//m_pSkyboxEffect->deactiveEffect();
+	}
+
 	if (m_bIsSceneGUI)
 	{
 		m_AxisLine[0].Draw(NPMathHelper::Vec3(), NPMathHelper::Vec3(1.f, 0.f, 0.f), NPMathHelper::Vec3(1.0f, 0.f, 0.f)
-			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+			, m_Cam.GetViewMatrix(), myProj.GetDataColumnMajor());
 		m_AxisLine[1].Draw(NPMathHelper::Vec3(), NPMathHelper::Vec3(0.f, 1.f, 0.f), NPMathHelper::Vec3(0.0f, 1.f, 0.f)
-			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+			, m_Cam.GetViewMatrix(), myProj.GetDataColumnMajor());
 		m_AxisLine[2].Draw(NPMathHelper::Vec3(), NPMathHelper::Vec3(0.f, 0.f, 1.f), NPMathHelper::Vec3(0.0f, 0.f, 1.f)
-			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+			, m_Cam.GetViewMatrix(), myProj.GetDataColumnMajor());
 	}
 
 	if (m_bIsSceneGUI)
@@ -434,7 +457,7 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		InLineEnd.x = cos(m_fInYaw) * sin(m_fInPitch) * 10.f;
 		InLineEnd.z = cos(m_fInYaw) * cos(m_fInPitch) * 10.f;
 		m_InLine.Draw(NPMathHelper::Vec3(), NPMathHelper::Vec3(InLineEnd.x, InLineEnd.y, InLineEnd.z), NPMathHelper::Vec3(1.0f, 1.f, 1.f)
-			, m_Cam.GetViewMatrix(), glm::value_ptr(proj));
+			, m_Cam.GetViewMatrix(), myProj.GetDataColumnMajor());
 	}
 
 	ATB_ASSERT(TwSetCurrentWindow(m_uiID));

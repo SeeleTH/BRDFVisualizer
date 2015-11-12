@@ -21,9 +21,8 @@ namespace NPGeoHelper
 		std::vector<vertex> vertices;
 		std::vector<unsigned int> indices;
 	};
-	Geometry MergeShape(const Geometry& left, const Geometry& right);
 	Geometry GetSlicedHemisphereShape(const float radius, const unsigned int vertSlice, unsigned int horiSlice);
-	Geometry GetPlaneShape(const float width, const float height, const NPMathHelper::Vec3 normDir);
+	Geometry GetFloorPlaneShape(const float width, const float height);
 	Geometry GetBoxShape(const float width, const float height, const float depth);
 }
 

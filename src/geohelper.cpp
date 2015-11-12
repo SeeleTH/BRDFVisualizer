@@ -3,6 +3,8 @@
 
 #include <glm/glm.hpp>
 
+using namespace NPMathHelper;
+
 namespace NPGeoHelper
 {
 	Geometry GetSlicedHemisphereShape(const float radius, const unsigned int vertSlice, unsigned int horiSlice)
@@ -52,6 +54,7 @@ namespace NPGeoHelper
 				result.indices.push_back(index + horiSlice + 1);
 				result.indices.push_back(index + 1);
 				result.indices.push_back(index);
+
 				result.indices.push_back(index + horiSlice + 1);
 				result.indices.push_back(index + 1 + horiSlice + 1);
 				result.indices.push_back(index + 1);
@@ -88,7 +91,7 @@ namespace NPGeoHelper
 		return result;
 	}
 
-	Geometry GetPlaneShape(const float width, const float height, const NPMathHelper::Vec3 normDir)
+	Geometry GetFloorPlaneShape(const float width, const float height)
 	{
 		Geometry result;
 
@@ -98,6 +101,58 @@ namespace NPGeoHelper
 	Geometry GetBoxShape(const float width, const float height, const float depth)
 	{
 		Geometry result;
+
+		Vec3 norm[6] = { Vec3(0.f, 0.f, 1.f), Vec3(1.f, 0.f, 0.f), Vec3(0.f, 0.f, -1.f), 
+			Vec3(-1.f, 0.f, 0.f), Vec3(0.f, -1.f, 0.f), Vec3(0.f, 1.f, 0.f)};
+		Vec3 tang[6] = { Vec3(1.f, 0.f, 0.f), Vec3(0.f, 0.f, -1.f), Vec3(-1.f, 0.f, 0.f),
+			Vec3(0.f, 0.f, 1.f), Vec3(0.f, 0.f, -1.f), Vec3(0.f, 0.f, 1.f) };
+		for (unsigned int i = 0; i < 6; i++)
+		{
+			Vec3 bitan = Vec3::cross(norm[i], tang[i]);
+			{
+				vertex vert;
+				vert.pos = (norm[i] * depth * 0.5f) - bitan * height * 0.5f - tang[i] * width * 0.5f;
+				vert.norm = norm[i];
+				vert.binorm = bitan;
+				vert.tan = tang[i];
+				vert.tex = Vec2(0.f,1.f);
+				result.vertices.push_back(vert);
+			}
+			{
+				vertex vert;
+				vert.pos = (norm[i] * depth * 0.5f) - bitan * height * 0.5f + tang[i] * width * 0.5f;
+				vert.norm = norm[i];
+				vert.binorm = bitan;
+				vert.tan = tang[i];
+				vert.tex = Vec2(1.f, 1.f);
+				result.vertices.push_back(vert);
+			}
+			{
+				vertex vert;
+				vert.pos = (norm[i] * depth * 0.5f) + bitan * height * 0.5f + tang[i] * width * 0.5f;
+				vert.norm = norm[i];
+				vert.binorm = bitan;
+				vert.tan = tang[i];
+				vert.tex = Vec2(1.f, 0.f);
+				result.vertices.push_back(vert);
+			}
+			{
+				vertex vert;
+				vert.pos = (norm[i] * depth * 0.5f) + bitan * height * 0.5f - tang[i] * width * 0.5f;
+				vert.norm = norm[i];
+				vert.binorm = bitan;
+				vert.tan = tang[i];
+				vert.tex = Vec2(0.f, 0.f);
+				result.vertices.push_back(vert);
+			}
+			result.indices.push_back(4 * i + 3);
+			result.indices.push_back(4 * i + 0);
+			result.indices.push_back(4 * i + 1);
+
+			result.indices.push_back(4 * i + 2);
+			result.indices.push_back(4 * i + 3);
+			result.indices.push_back(4 * i + 1);
+		}
 
 		return result;
 	}

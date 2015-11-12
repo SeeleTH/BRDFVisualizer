@@ -91,5 +91,11 @@
     <None Include="..\shader\BRDFModelVS.glsl">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="..\shader\SkyboxPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\SkyboxVS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

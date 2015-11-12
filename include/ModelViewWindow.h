@@ -178,6 +178,10 @@ protected:
 
 	//AntTweakBar
 	int m_iScrollingTemp;
+
+	//Other object
+	NPGLHelper::Effect* m_pSkyboxEffect;
+	NPGLHelper::RenderObject m_skybox;
 };
 
 #endif
