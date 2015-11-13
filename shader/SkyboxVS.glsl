@@ -14,6 +14,7 @@ uniform mat4 tranInvModel;
 
 void main()
 {
+	outDir = normalize(position);
 	gl_Position = projection * view * model * vec4(position, 1.0);
-	outDir = normalize(gl_Position);
+	gl_Position.z = gl_Position.w;
 }

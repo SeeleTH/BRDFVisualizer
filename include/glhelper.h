@@ -29,8 +29,8 @@ namespace NPGLHelper
 	bool checkShaderError(GLuint shader, GLuint checking, std::string &info);
 	bool checkProgramError(GLuint program, GLuint checking, std::string &info);
 
-	bool loadTextureFromFile(const char* path, GLuint &id, GLint warpS, GLint warpT, GLint minFil, GLint maxFil);
-	bool loadCubemapFromFiles(std::string faces[6], GLuint &id);
+	bool loadTextureFromFile(const char* path, GLuint &id, GLint warpS, GLint warpT, GLint minFil, GLint maxFil, bool sRGB = true);
+	bool loadCubemapFromFiles(std::string faces[6], GLuint &id, bool sRGB = true);
 
 
 	class RenderObject

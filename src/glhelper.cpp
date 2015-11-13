@@ -88,7 +88,7 @@ namespace NPGLHelper
 		return success != 0;
 	}
 
-	bool loadTextureFromFile(const char* path, GLuint &id, GLint warpS, GLint warpT, GLint minFil, GLint maxFil)
+	bool loadTextureFromFile(const char* path, GLuint &id, GLint warpS, GLint warpT, GLint minFil, GLint maxFil, bool sRGB)
 	{
 		int width, height;
 		unsigned char* image = SOIL_load_image(path, &width, &height, 0, SOIL_LOAD_RGB);
@@ -103,14 +103,14 @@ namespace NPGLHelper
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+		glTexImage2D(GL_TEXTURE_2D, 0, (sRGB) ? GL_SRGB : GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		SOIL_free_image_data(image);
 		glBindTexture(GL_TEXTURE_2D, 0);
 		return true;
 	}
 
-	bool loadCubemapFromFiles(std::string faces[6], GLuint &id)
+	bool loadCubemapFromFiles(std::string faces[6], GLuint &id, bool sRGB)
 	{
 		glGenTextures(1, &id);
 		glActiveTexture(GL_TEXTURE0);
@@ -128,7 +128,7 @@ namespace NPGLHelper
 			}
 			glTexImage2D(
 				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-				GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+				GL_SRGB, width, height, 0, (sRGB) ? GL_SRGB : GL_RGB, GL_UNSIGNED_BYTE, image);
 			SOIL_free_image_data(image);
 		}
 		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

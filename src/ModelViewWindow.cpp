@@ -208,6 +208,23 @@ void TW_CALL LoadCubemapButton(void* window)
 		appWin->LoadCubemap();
 }
 
+void TW_CALL SetRenderingMethodCallback(const void *value, void *clientData)
+{
+	ModelViewWindow* appWin = (ModelViewWindow*)clientData;
+	if (appWin)
+	{
+		ModelViewWindow::RENDERINGMETHODS method = *((ModelViewWindow::RENDERINGMETHODS*) value);
+		appWin->SetRenderingMethod(method);
+	}
+}
+void TW_CALL GetRenderingMethodCallback(void *value, void *clientData)
+{
+	ModelViewWindow* appWin = (ModelViewWindow*)clientData;
+	if (appWin)
+	{
+		*(ModelViewWindow::RENDERINGMETHODS*)value = appWin->GetRenderingMethod();
+	}
+}
 
 ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int sizeH)
 	: Window(name, sizeW, sizeH)
@@ -240,6 +257,7 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_bIsEnvMapLoaded(false)
 	, m_uiEnvMap(0)
 	, m_pSkyboxEffect(nullptr)
+	, m_eRenderingMethod(RENDERINGMETHOD_NONE)
 {
 }
 
@@ -249,7 +267,10 @@ ModelViewWindow::~ModelViewWindow()
 
 int ModelViewWindow::OnInit()
 {
-	// AntTweakBar Init
+	////////////////////
+	// ANT INIT - BGN //
+	////////////////////
+
 	ATB_ASSERT(NPTwInit(m_uiID, TW_OPENGL_CORE, nullptr));
 	ATB_ASSERT(TwSetCurrentWindow(m_uiID));
 	ATB_ASSERT(TwWindowSize(m_iSizeW, m_iSizeH));
@@ -267,6 +288,12 @@ int ModelViewWindow::OnInit()
 		" label='Wireframe' help='Show Wireframe' group='Display'"));
 	ATB_ASSERT(TwAddVarRW(mainBar, "scenegui", TW_TYPE_BOOLCPP, &m_bIsSceneGUI,
 		" label='Scene GUI' help='Show Scene GUI' group='Display'"));
+	
+	TwEnumVal renderEV[] = { { RENDERINGMETHOD_BRDFDIRLIGHT, "BRDF DirLight" }, 
+	{ RENDERINGMETHOD_BRDFENVMAP, "BRDF EnvMap" },
+	{ RENDERINGMETHOD_BLINNPHONGDIRLIGHT, "Blinn-Phong DirLight" } };
+	TwType renderType = TwDefineEnum("Rendering Method", renderEV, RENDERINGMETHOD_N);
+	TwAddVarCB(mainBar, "Rendering", renderType, SetRenderingMethodCallback, GetRenderingMethodCallback, this, " label='Rendering Method' help='Set Rendering Method' group='Display'");
 
 	ATB_ASSERT(TwAddVarRW(mainBar, "PosX", TW_TYPE_FLOAT, &m_v3ModelPos._x,
 		" label='Pos X' help='Model Translation' group='Model'"));
@@ -305,6 +332,10 @@ int ModelViewWindow::OnInit()
 	ATB_ASSERT(TwAddButton(mainBar, "instruction2", NULL, NULL, "label='RClick+Drag: Rot Camera dir'"));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction3", NULL, NULL, "label='Scroll: Zoom Camera in/out'"));
 
+	////////////////////
+	// ANT INIT - END //
+	////////////////////
+
 	m_AxisLine[0].Init(m_pShareContent);
 	m_AxisLine[1].Init(m_pShareContent);
 	m_AxisLine[2].Init(m_pShareContent);
@@ -333,6 +364,10 @@ int ModelViewWindow::OnInit()
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
+
+	glDepthFunc(GL_LEQUAL);
+
+	SetRenderingMethod(RENDERINGMETHOD_BRDFDIRLIGHT);
 
 	return 0;
 }
@@ -366,79 +401,24 @@ int ModelViewWindow::OnTick(const float deltaTime)
 	m_v2LastCursorPos = m_v2CurrentCursorPos;
 	// Camera control - end
 
-	NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
-	NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
-		,NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
-		,NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
-	NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
-
 	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (m_bIsWireFrame)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	else
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-	UpdateBRDFData();
-	if (/*m_bIsLoadTexture &&*/ m_pModel)
+	switch (m_eRenderingMethod)
 	{
-		m_pBRDFVisEffect->activeEffect();
-		m_pBRDFVisEffect->SetInt("n_th", m_uiNTH);
-		m_pBRDFVisEffect->SetInt("n_ph", m_uiNPH);
-		m_pBRDFVisEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
-		m_pBRDFVisEffect->SetMatrix("view", m_Cam.GetViewMatrix());
-		m_pBRDFVisEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
-		m_pBRDFVisEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
-
-		glm::vec3 lightDir;
-		lightDir.y = -sin(m_fInYaw);
-		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
-		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
-
-		m_pBRDFVisEffect->SetVec3("lightDir", lightDir.x, lightDir.y, lightDir.z);
-		m_pBRDFVisEffect->SetVec3("lightColor", m_v3LightColor.x * m_fLightIntMultiplier
-			, m_v3LightColor.y * m_fLightIntMultiplier, m_v3LightColor.z * m_fLightIntMultiplier);
-		glm::vec3 camDir = m_Cam.GetDir();
-		m_pBRDFVisEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
-
-		if (m_bIsLoadTexture)
-		{
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-			m_pBRDFVisEffect->SetInt("texture_brdf", 0);
-		}
-
-		m_pModel->Draw(*m_pBRDFVisEffect);
-
-		glBindVertexArray(m_skybox.GetVAO());
-		glDrawElements(GL_TRIANGLES, m_skybox.GetIndicesSize(), GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
-
-		m_pBRDFVisEffect->deactiveEffect();
+	case RENDERINGMETHOD_BRDFDIRLIGHT:
+		RenderMethod_BRDFDirLight();
+		break;
+	case RENDERINGMETHOD_BRDFENVMAP:
+		RenderMethod_BRDFEnvMap();
+		break;
+	case RENDERINGMETHOD_BLINNPHONGDIRLIGHT:
+		RenderMethod_BlinnPhongDirLight();
+		break;
 	}
 
-	if (m_bIsWireFrame)
-	{
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	}
 
-	if (m_bIsEnvMapLoaded)
-	{
-		//m_pSkyboxEffect->activeEffect();
-		//m_pSkyboxEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
-		//m_pSkyboxEffect->SetMatrix("view", m_Cam.GetViewMatrix());
-		//m_pSkyboxEffect->SetMatrix("model", glm::value_ptr(model));
-
-		//glActiveTexture(GL_TEXTURE0);
-		//glBindTexture(GL_TEXTURE_2D, m_uiEnvMap);
-		//m_pSkyboxEffect->SetInt("envmap", 0);
-
-		//glBindVertexArray(m_skybox.GetVAO());
-		//glDrawElements(GL_TRIANGLES, m_skybox.GetIndicesSize(), GL_UNSIGNED_INT, 0);
-		//glBindVertexArray(0);
-		//m_pSkyboxEffect->deactiveEffect();
-	}
+	NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
 
 	if (m_bIsSceneGUI)
 	{
@@ -570,6 +550,37 @@ void ModelViewWindow::LoadCubemap()
 	m_bIsEnvMapLoaded = true;
 }
 
+void ModelViewWindow::SetRenderingMethod(RENDERINGMETHODS method)
+{
+	switch (m_eRenderingMethod)
+	{
+	case RENDERINGMETHOD_BRDFDIRLIGHT:
+		RenderMethod_BRDFDirLightQuit();
+		break;
+	case RENDERINGMETHOD_BRDFENVMAP:
+		RenderMethod_BRDFEnvMapQuit();
+		break;
+	case RENDERINGMETHOD_BLINNPHONGDIRLIGHT:
+		RenderMethod_BlinnPhongDirLightQuit();
+		break;
+	}
+
+	m_eRenderingMethod = method;
+
+	switch (m_eRenderingMethod)
+	{
+	case RENDERINGMETHOD_BRDFDIRLIGHT:
+		RenderMethod_BRDFDirLightInit();
+		break;
+	case RENDERINGMETHOD_BRDFENVMAP:
+		RenderMethod_BRDFEnvMapInit();
+		break;
+	case RENDERINGMETHOD_BLINNPHONGDIRLIGHT:
+		RenderMethod_BlinnPhongDirLightInit();
+		break;
+	}
+}
+
 void ModelViewWindow::UpdateBRDFData()
 {
 	if (!m_bIsBRDFUpdated)
@@ -589,7 +600,7 @@ void ModelViewWindow::UpdateBRDFData()
 		}
 
 		int width, height;
-		if (!NPGLHelper::loadTextureFromFile(m_sNewBRDFPath.c_str(), m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST))
+		if (!NPGLHelper::loadTextureFromFile(m_sNewBRDFPath.c_str(), m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST, false))
 		{
 			std::string message = "Cannot load file ";
 			message = message + m_sNewBRDFPath;
@@ -602,3 +613,120 @@ void ModelViewWindow::UpdateBRDFData()
 		m_sBRDFTextureName = m_sNewBRDFPath;
 	}
 }
+
+
+void ModelViewWindow::RenderMethod_BRDFDirLight()
+{
+	if (m_bIsWireFrame)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	else
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	UpdateBRDFData();
+	if (/*m_bIsLoadTexture &&*/ m_pModel)
+	{
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+			, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+			, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+		m_pBRDFVisEffect->activeEffect();
+		m_pBRDFVisEffect->SetInt("n_th", m_uiNTH);
+		m_pBRDFVisEffect->SetInt("n_ph", m_uiNPH);
+		m_pBRDFVisEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pBRDFVisEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		m_pBRDFVisEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pBRDFVisEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+
+		glm::vec3 lightDir;
+		lightDir.y = -sin(m_fInYaw);
+		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
+		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
+
+		m_pBRDFVisEffect->SetVec3("lightDir", lightDir.x, lightDir.y, lightDir.z);
+		m_pBRDFVisEffect->SetVec3("lightColor", m_v3LightColor.x * m_fLightIntMultiplier
+			, m_v3LightColor.y * m_fLightIntMultiplier, m_v3LightColor.z * m_fLightIntMultiplier);
+		glm::vec3 camDir = m_Cam.GetDir();
+		m_pBRDFVisEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
+
+		if (m_bIsLoadTexture)
+		{
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
+			m_pBRDFVisEffect->SetInt("texture_brdf", 0);
+		}
+
+		m_pModel->Draw(*m_pBRDFVisEffect);
+		m_pBRDFVisEffect->deactiveEffect();
+	}
+
+	if (m_bIsWireFrame)
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+}
+
+void ModelViewWindow::RenderMethod_BRDFEnvMap()
+{
+	if (m_bIsEnvMapLoaded)
+	{
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+
+		glCullFace(GL_FRONT);
+		NPMathHelper::Mat4x4 noTranCamMath = m_Cam.GetViewMatrix();
+		noTranCamMath._03 = noTranCamMath._13 = noTranCamMath._23 = 0.f;
+		m_pSkyboxEffect->activeEffect();
+		m_pSkyboxEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pSkyboxEffect->SetMatrix("view", noTranCamMath.GetDataColumnMajor());
+		m_pSkyboxEffect->SetMatrix("model", NPMathHelper::Mat4x4::scaleTransform(1.0f, 1.0f, 1.0f).GetDataColumnMajor());
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap);
+		m_pSkyboxEffect->SetInt("envmap", 0);
+
+		glBindVertexArray(m_skybox.GetVAO());
+		glDrawElements(GL_TRIANGLES, m_skybox.GetIndicesSize(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		m_pSkyboxEffect->deactiveEffect();
+		glCullFace(GL_BACK);
+	}
+}
+
+void ModelViewWindow::RenderMethod_BlinnPhongDirLight()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BRDFDirLightInit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BRDFEnvMapInit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BlinnPhongDirLightInit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BRDFDirLightQuit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BRDFEnvMapQuit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BlinnPhongDirLightQuit()
+{
+
+}
+
+
+

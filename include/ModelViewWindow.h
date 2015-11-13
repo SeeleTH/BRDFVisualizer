@@ -123,8 +123,34 @@ public:
 	void SetCubemap(unsigned int side);
 	void LoadCubemap();
 
+	enum RENDERINGMETHODS
+	{
+		RENDERINGMETHOD_BRDFDIRLIGHT,
+		RENDERINGMETHOD_BRDFENVMAP,
+		RENDERINGMETHOD_BLINNPHONGDIRLIGHT,
+		RENDERINGMETHOD_N,
+		RENDERINGMETHOD_NONE,
+	};
+	RENDERINGMETHODS GetRenderingMethod() { return m_eRenderingMethod; }
+	void SetRenderingMethod(RENDERINGMETHODS method);
+
 protected:
 	void UpdateBRDFData();
+
+	// Rendering methods
+	RENDERINGMETHODS m_eRenderingMethod;
+
+	void RenderMethod_BRDFDirLight();
+	void RenderMethod_BRDFEnvMap();
+	void RenderMethod_BlinnPhongDirLight();
+
+	void RenderMethod_BRDFDirLightInit();
+	void RenderMethod_BRDFEnvMapInit();
+	void RenderMethod_BlinnPhongDirLightInit();
+
+	void RenderMethod_BRDFDirLightQuit();
+	void RenderMethod_BRDFEnvMapQuit();
+	void RenderMethod_BlinnPhongDirLightQuit();
 
 	// BRDF
 	bool m_bIsBRDFUpdated;

@@ -9,5 +9,6 @@ uniform samplerCube envmap;
 
 void main()
 {
-	color = texture(envmap, outDir);
+	vec3 dir = normalize(outDir);
+	color = texture(envmap, dir);
 }

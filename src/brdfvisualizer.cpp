@@ -257,7 +257,7 @@ void BRDFVisualizer::OpenBRDFData()
 		return;
 
 	int width, height;
-	if (!NPGLHelper::loadTextureFromFile(file.c_str(), m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST))
+	if (!NPGLHelper::loadTextureFromFile(file.c_str(), m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST, false))
 	{
 		std::string message = "Cannot load file ";
 		message = message + file;
