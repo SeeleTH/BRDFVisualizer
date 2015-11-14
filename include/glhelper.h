@@ -19,6 +19,29 @@
 #include "geohelper.h"
 #include "mathhelper.h"
 
+#ifdef _DEBUG
+static void CheckGLCoreError(const char *file, int line, const char *func)
+{
+	int err = 0;
+	char msg[256];
+	while ((err = glGetError()) != 0)
+	{
+		sprintf_s(msg, "%s(%d) : [%s] GL_CORE_ERROR=0x%x\n", file, line, func, err);
+#ifdef ANT_WINDOWS
+		OutputDebugString(msg);
+#endif
+		fprintf(stderr, msg);
+	}
+}
+#   ifdef __FUNCTION__
+#       define CHECK_GL_ERROR CheckGLCoreError(__FILE__, __LINE__, __FUNCTION__)
+#   else
+#       define CHECK_GL_ERROR CheckGLCoreError(__FILE__, __LINE__, "")
+#   endif
+#else
+#   define CHECK_GL_ERROR ((void)(0))
+#endif
+
 GLEWContext* glewGetContext();
 
 namespace NPGLHelper

@@ -97,5 +97,11 @@
     <None Include="..\shader\SkyboxVS.glsl">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="..\shader\FinalComposeVS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\FinalComposePS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -26,7 +26,7 @@
 
 #if !defined(DEBUG_COUT)
 #if _DEBUG
-#define DEBUG_COUT(MSG) std::cout << "[DEBUG] " << MSG << std::endl;
+#define DEBUG_COUT(MSG) std::cout << "[" << __FILE__ <<":" << __LINE__ << "] " << MSG << std::endl;
 #else
 #define DEBUG_COUT(MSG)
 #endif

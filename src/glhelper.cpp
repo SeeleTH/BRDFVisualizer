@@ -112,13 +112,13 @@ namespace NPGLHelper
 
 	bool loadCubemapFromFiles(std::string faces[6], GLuint &id, bool sRGB)
 	{
-		glGenTextures(1, &id);
-		glActiveTexture(GL_TEXTURE0);
+		glGenTextures(1, &id); CHECK_GL_ERROR;
+		glActiveTexture(GL_TEXTURE0); CHECK_GL_ERROR;
 
 		int width, height;
 		unsigned char* image;
 
-		glBindTexture(GL_TEXTURE_CUBE_MAP, id);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, id); CHECK_GL_ERROR;
 		for (unsigned int i = 0; i < 6; i++)
 		{
 			image = SOIL_load_image(faces[i].c_str(), &width, &height, 0, SOIL_LOAD_RGB); 
@@ -128,14 +128,14 @@ namespace NPGLHelper
 			}
 			glTexImage2D(
 				GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0,
-				GL_SRGB, width, height, 0, (sRGB) ? GL_SRGB : GL_RGB, GL_UNSIGNED_BYTE, image);
+				(sRGB) ? GL_SRGB : GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image); CHECK_GL_ERROR;
 			SOIL_free_image_data(image);
 		}
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR); CHECK_GL_ERROR;
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR); CHECK_GL_ERROR;
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); CHECK_GL_ERROR;
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); CHECK_GL_ERROR;
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE); CHECK_GL_ERROR;
 
 		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 		return true;
@@ -626,7 +626,7 @@ namespace NPGLHelper
 			m_uiCurrentMaxID--;
 			return 0;
 		}
-
+		CHECK_GL_ERROR;
 		glViewport(0, 0, window->m_iSizeW, window->m_iSizeH);
 		window->SetOwner(this);
 		window->OnInit();
@@ -670,6 +670,7 @@ namespace NPGLHelper
 
 	void DebugLine::Init(ShareContent* content)
 	{
+		CHECK_GL_ERROR;
 		m_pEffect = content->GetEffect("DebugLineEffect");
 		if (!m_pEffect->GetIsLinked())
 		{
@@ -678,9 +679,8 @@ namespace NPGLHelper
 			m_pEffect->attachShaderFromFile("../shader/debugLinePS.glsl", GL_FRAGMENT_SHADER);
 			m_pEffect->linkEffect();
 		}
-
-		UpdateBuffer();
 		glGenBuffers(1, &m_iVBO);
+		UpdateBuffer();
 		glGenVertexArrays(1, &m_iVAO);
 		glBindVertexArray(m_iVAO);
 		glBindBuffer(GL_ARRAY_BUFFER, m_iVBO);
@@ -689,11 +689,13 @@ namespace NPGLHelper
 		glEnableVertexAttribArray(0);
 		glEnableVertexAttribArray(1);
 		glBindVertexArray(0);
+		CHECK_GL_ERROR;
 	}
 
 	void DebugLine::Draw(const NPMathHelper::Vec3& start, const NPMathHelper::Vec3& end, const NPMathHelper::Vec3& color
 		, const float* viewMat, const float* projMat)
 	{
+		CHECK_GL_ERROR;
 		if (start != m_v3Start || end != m_v3End || color != m_v3Color)
 		{
 			m_v3Start = start;
@@ -714,10 +716,12 @@ namespace NPGLHelper
 		glBindVertexArray(0);
 
 		m_pEffect->deactiveEffect();
+		CHECK_GL_ERROR;
 	}
 
 	void DebugLine::UpdateBuffer()
 	{
+		CHECK_GL_ERROR;
 		std::vector<GLfloat> vertices;
 		vertices.push_back(m_v3Start._x);
 		vertices.push_back(m_v3Start._y);
@@ -734,6 +738,7 @@ namespace NPGLHelper
 
 		glBindBuffer(GL_ARRAY_BUFFER, m_iVBO);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), vertices.data(), GL_DYNAMIC_DRAW);
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0); 
+		CHECK_GL_ERROR;
 	}
 }

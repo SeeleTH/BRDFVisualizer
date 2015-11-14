@@ -109,6 +109,13 @@ namespace BRDFModel
 class ModelViewWindow : public NPGLHelper::Window
 {
 public:
+	struct CUBEMAPLOADCMD{
+		ModelViewWindow* win;
+		unsigned int side;
+		CUBEMAPLOADCMD() {}
+		CUBEMAPLOADCMD(ModelViewWindow* w, unsigned int s) : win(w), side(s) {}
+	};
+
 	ModelViewWindow(const char* name, const int sizeW = 800, const int sizeH = 600);
 	virtual ~ModelViewWindow();
 
@@ -152,6 +159,18 @@ protected:
 	void RenderMethod_BRDFEnvMapQuit();
 	void RenderMethod_BlinnPhongDirLightQuit();
 
+	// Render Quad
+	void RenderScreenQuad();
+	GLuint m_uiVBOQuad;
+	GLuint m_uiVAOQuad;
+
+	// Main Render Target (HDR)
+	GLuint m_uiHDRFBO;
+	GLuint m_uiHDRCB;
+	GLuint m_uiHDRDB;
+	NPGLHelper::Effect* m_pFinalComposeEffect;
+	float m_fExposure;
+
 	// BRDF
 	bool m_bIsBRDFUpdated;
 	std::string m_sNewBRDFPath;
@@ -188,6 +207,7 @@ protected:
 	bool m_bIsEnvMapDirty;
 	std::string m_sEnvMapNames[6];
 	GLuint m_uiEnvMap;
+	CUBEMAPLOADCMD m_buttonInterfaceCmd[6];
 
 	// Camera Control
 	bool m_bIsCamRotate, m_bIsInRotate;

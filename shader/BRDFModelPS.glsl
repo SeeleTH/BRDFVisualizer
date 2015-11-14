@@ -105,6 +105,7 @@ void main()
 	vec3 viewDirL = tbn * viewDir;
 	vec3 brdf = SampleBRDF_Linear(-lightDirL, -viewDirL);
 	vec4 diff = texture(texture_diffuse1, outTexCoord);
-	vec4 result = vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) + vec4(lightColor, 1.0f) * diff * clamp(dot(-lightDir, normal), 0.f, 1.f);
+	//vec4 result = vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) + vec4(lightColor, 1.0f) * diff * clamp(dot(-lightDir, normal), 0.f, 1.f);
+	vec4 result = vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(-lightDir, normal), 0.f, 1.f);
 	color = result;
 }

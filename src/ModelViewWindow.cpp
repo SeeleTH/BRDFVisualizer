@@ -181,23 +181,14 @@ void TW_CALL BrowseModelButton(void* window)
 		appWin->OpenModelData();
 }
 
-struct CUBEMAPLOADCMD{
-	ModelViewWindow* win;
-	unsigned int side;
-	CUBEMAPLOADCMD(ModelViewWindow* w, unsigned int s) : win(w), side(s) {}
-};
 void TW_CALL BrowseCubemapButton(void* content)
 {
-	CUBEMAPLOADCMD* cmd = (CUBEMAPLOADCMD*)content;
+	ModelViewWindow::CUBEMAPLOADCMD* cmd = (ModelViewWindow::CUBEMAPLOADCMD*)content;
 	if (!cmd)
 		return;
 	if (cmd && cmd->win)
 	{
 		cmd->win->SetCubemap(cmd->side);
-	}
-	if (content)
-	{
-		delete content;
 	}
 }
 
@@ -258,6 +249,13 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_uiEnvMap(0)
 	, m_pSkyboxEffect(nullptr)
 	, m_eRenderingMethod(RENDERINGMETHOD_NONE)
+	, m_uiVAOQuad(0)
+	, m_uiVBOQuad(0)
+	, m_uiHDRFBO(0)
+	, m_uiHDRCB(0)
+	, m_uiHDRDB(0)
+	, m_pFinalComposeEffect(nullptr)
+	, m_fExposure(1.f)
 {
 }
 
@@ -270,7 +268,7 @@ int ModelViewWindow::OnInit()
 	////////////////////
 	// ANT INIT - BGN //
 	////////////////////
-
+	CHECK_GL_ERROR;
 	ATB_ASSERT(NPTwInit(m_uiID, TW_OPENGL_CORE, nullptr));
 	ATB_ASSERT(TwSetCurrentWindow(m_uiID));
 	ATB_ASSERT(TwWindowSize(m_iSizeW, m_iSizeH));
@@ -288,6 +286,8 @@ int ModelViewWindow::OnInit()
 		" label='Wireframe' help='Show Wireframe' group='Display'"));
 	ATB_ASSERT(TwAddVarRW(mainBar, "scenegui", TW_TYPE_BOOLCPP, &m_bIsSceneGUI,
 		" label='Scene GUI' help='Show Scene GUI' group='Display'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Exposure", TW_TYPE_FLOAT, &m_fExposure,
+		" label='Exposure' help='View Exposure' group='Display' step=0.1"));
 	
 	TwEnumVal renderEV[] = { { RENDERINGMETHOD_BRDFDIRLIGHT, "BRDF DirLight" }, 
 	{ RENDERINGMETHOD_BRDFENVMAP, "BRDF EnvMap" },
@@ -318,7 +318,9 @@ int ModelViewWindow::OnInit()
 		std::string vName = "envmaplabel" + i;
 		std::string bPara = "label='Browse " + facename[i] + " Map' group='Environment Map'";
 		std::string vPara = "label='" + facename[i] + " Map' group='Environment Map'";
-		ATB_ASSERT(TwAddButton(mainBar, bName.c_str(), BrowseCubemapButton, new CUBEMAPLOADCMD(this, i), bPara.c_str()));
+		m_buttonInterfaceCmd[i].side = i;
+		m_buttonInterfaceCmd[i].win = this;
+		ATB_ASSERT(TwAddButton(mainBar, bName.c_str(), BrowseCubemapButton, m_buttonInterfaceCmd + i, bPara.c_str()));
 		ATB_ASSERT(TwAddVarRW(mainBar, vName.c_str(), TW_TYPE_STDSTRING, &m_sEnvMapNames[i], vPara.c_str()));
 	}
 	ATB_ASSERT(TwAddSeparator(mainBar, "envmapsep", "group='Environment Map'"));
@@ -331,7 +333,7 @@ int ModelViewWindow::OnInit()
 	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='LClick+Drag: Rot Light dir'"));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction2", NULL, NULL, "label='RClick+Drag: Rot Camera dir'"));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction3", NULL, NULL, "label='Scroll: Zoom Camera in/out'"));
-
+	CHECK_GL_ERROR;
 	////////////////////
 	// ANT INIT - END //
 	////////////////////
@@ -340,7 +342,7 @@ int ModelViewWindow::OnInit()
 	m_AxisLine[1].Init(m_pShareContent);
 	m_AxisLine[2].Init(m_pShareContent);
 	m_InLine.Init(m_pShareContent);
-
+	CHECK_GL_ERROR;
 	m_pBRDFVisEffect = m_pShareContent->GetEffect("BRDFModelEffect");
 	if (!m_pBRDFVisEffect->GetIsLinked())
 	{
@@ -349,7 +351,7 @@ int ModelViewWindow::OnInit()
 		m_pBRDFVisEffect->attachShaderFromFile("..\\shader\\BRDFModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pBRDFVisEffect->linkEffect();
 	}
-
+	CHECK_GL_ERROR;
 	m_pSkyboxEffect = m_pShareContent->GetEffect("SkyboxEffect");
 	if (!m_pSkyboxEffect->GetIsLinked())
 	{
@@ -361,11 +363,41 @@ int ModelViewWindow::OnInit()
 
 	m_skybox.SetGeometry(NPGeoHelper::GetBoxShape(1.f, 1.f, 1.f));
 
+	CHECK_GL_ERROR;
+	glGenFramebuffers(1, &m_uiHDRFBO);
+	glGenTextures(1, &m_uiHDRCB);
+	glBindTexture(GL_TEXTURE_2D, m_uiHDRCB);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, m_iSizeW, m_iSizeH, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glGenRenderbuffers(1, &m_uiHDRDB);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_uiHDRDB);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, m_iSizeW, m_iSizeH);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_uiHDRFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_uiHDRCB, 0);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_uiHDRDB);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		DEBUG_COUT("[!!!]FRAMEBUFFER::CREATION_FAILED" << std::endl);
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	CHECK_GL_ERROR;
+
+	m_pFinalComposeEffect = m_pShareContent->GetEffect("FinalComposeEffect");
+	if (!m_pFinalComposeEffect->GetIsLinked())
+	{
+		m_pFinalComposeEffect->initEffect();
+		m_pFinalComposeEffect->attachShaderFromFile("..\\shader\\FinalComposeVS.glsl", GL_VERTEX_SHADER);
+		m_pFinalComposeEffect->attachShaderFromFile("..\\shader\\FinalComposePS.glsl", GL_FRAGMENT_SHADER);
+		m_pFinalComposeEffect->linkEffect();
+	}
+
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
 
 	glDepthFunc(GL_LEQUAL);
+	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
 	SetRenderingMethod(RENDERINGMETHOD_BRDFDIRLIGHT);
 
@@ -401,9 +433,8 @@ int ModelViewWindow::OnTick(const float deltaTime)
 	m_v2LastCursorPos = m_v2CurrentCursorPos;
 	// Camera control - end
 
-	glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glBindFramebuffer(GL_FRAMEBUFFER, m_uiHDRFBO);
 	switch (m_eRenderingMethod)
 	{
 	case RENDERINGMETHOD_BRDFDIRLIGHT:
@@ -417,7 +448,18 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		break;
 	}
 
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	m_pFinalComposeEffect->activeEffect();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_uiHDRCB);
+	m_pFinalComposeEffect->SetInt("hdrBuffer", 0);
+	m_pFinalComposeEffect->SetFloat("exposure", m_fExposure);
+	RenderScreenQuad();
+	glBindTexture(GL_TEXTURE_2D, 0);
+	m_pFinalComposeEffect->deactiveEffect();
 
+	glClear(GL_DEPTH_BUFFER_BIT);
 	NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
 
 	if (m_bIsSceneGUI)
@@ -617,6 +659,8 @@ void ModelViewWindow::UpdateBRDFData()
 
 void ModelViewWindow::RenderMethod_BRDFDirLight()
 {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	if (m_bIsWireFrame)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	else
@@ -668,6 +712,8 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 
 void ModelViewWindow::RenderMethod_BRDFEnvMap()
 {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	if (m_bIsEnvMapLoaded)
 	{
 		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
@@ -726,6 +772,32 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapQuit()
 void ModelViewWindow::RenderMethod_BlinnPhongDirLightQuit()
 {
 
+}
+
+
+void ModelViewWindow::RenderScreenQuad()
+{
+	if (m_uiVAOQuad == 0)
+	{
+		GLfloat quadVertices[] = {
+			-1.f, 1.f, 0.f, 0.f, 1.f,
+			-1.f, -1.f, 0.f, 0.f, 0.f,
+			1.f, 1.f, 0.f, 1.f, 1.f,
+			1.f, -1.f, 0.f, 1.f, 0.f
+		};
+		glGenVertexArrays(1, &m_uiVAOQuad);
+		glGenBuffers(1, &m_uiVBOQuad);
+		glBindVertexArray(m_uiVAOQuad);
+		glBindBuffer(GL_ARRAY_BUFFER, m_uiVBOQuad);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+		glEnableVertexAttribArray(1);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)( 3 * sizeof(GLfloat)));
+	}
+	glBindVertexArray(m_uiVAOQuad);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glBindVertexArray(0);
 }
 
 
