@@ -170,6 +170,11 @@ protected:
 	GLuint m_uiHDRDB;
 	NPGLHelper::Effect* m_pFinalComposeEffect;
 	float m_fExposure;
+	NPCamHelper::RotateCamera m_Cam;
+
+	NPGLHelper::Effect* m_pBRDFModelEffect;
+	NPGLHelper::Effect* m_pBRDFEnvModelEffect;
+	unsigned int m_uiEnvInitSamp;
 
 	// BRDF
 	bool m_bIsBRDFUpdated;
@@ -185,10 +190,6 @@ protected:
 	bool m_bIsLoadModel;
 	BRDFModel::Model* m_pModel;
 	std::string m_sModelName;
-
-	NPGLHelper::Effect* m_pBRDFVisEffect;
-	NPGLHelper::RenderObject testObject;
-	NPCamHelper::RotateCamera m_Cam;
 
 	// Display Options
 	bool m_bIsWireFrame;

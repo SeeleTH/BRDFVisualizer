@@ -8,6 +8,8 @@
 #include "oshelper.h"
 #include "atbhelper.h"
 
+#define ITR_COUNT 10;
+
 namespace BRDFModel
 {
 	void Mesh::Draw(NPGLHelper::Effect &effect)
@@ -231,7 +233,7 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_fZoomMin(0.25f)
 	, m_fZoomMax(20.0f)
 	, m_fZoomSen(0.1f)
-	, m_pBRDFVisEffect(nullptr)
+	, m_pBRDFModelEffect(nullptr)
 	, m_bIsLoadTexture(false)
 	, m_sBRDFTextureName("None")
 	, m_bIsLoadModel(false)
@@ -255,6 +257,7 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_uiHDRCB(0)
 	, m_uiHDRDB(0)
 	, m_pFinalComposeEffect(nullptr)
+	, m_pBRDFEnvModelEffect(nullptr)
 	, m_fExposure(1.f)
 {
 }
@@ -343,13 +346,22 @@ int ModelViewWindow::OnInit()
 	m_AxisLine[2].Init(m_pShareContent);
 	m_InLine.Init(m_pShareContent);
 	CHECK_GL_ERROR;
-	m_pBRDFVisEffect = m_pShareContent->GetEffect("BRDFModelEffect");
-	if (!m_pBRDFVisEffect->GetIsLinked())
+	m_pBRDFModelEffect = m_pShareContent->GetEffect("BRDFModelEffect");
+	if (!m_pBRDFModelEffect->GetIsLinked())
 	{
-		m_pBRDFVisEffect->initEffect();
-		m_pBRDFVisEffect->attachShaderFromFile("..\\shader\\BRDFModelVS.glsl", GL_VERTEX_SHADER);
-		m_pBRDFVisEffect->attachShaderFromFile("..\\shader\\BRDFModelPS.glsl", GL_FRAGMENT_SHADER);
-		m_pBRDFVisEffect->linkEffect();
+		m_pBRDFModelEffect->initEffect();
+		m_pBRDFModelEffect->attachShaderFromFile("..\\shader\\BRDFModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBRDFModelEffect->attachShaderFromFile("..\\shader\\BRDFModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pBRDFModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
+	m_pBRDFEnvModelEffect = m_pShareContent->GetEffect("BRDFEnvModelEffect");
+	if (!m_pBRDFEnvModelEffect->GetIsLinked())
+	{
+		m_pBRDFEnvModelEffect->initEffect();
+		m_pBRDFEnvModelEffect->attachShaderFromFile("..\\shader\\BRDFEnvModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBRDFEnvModelEffect->attachShaderFromFile("..\\shader\\BRDFEnvModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pBRDFEnvModelEffect->linkEffect();
 	}
 	CHECK_GL_ERROR;
 	m_pSkyboxEffect = m_pShareContent->GetEffect("SkyboxEffect");
@@ -360,6 +372,7 @@ int ModelViewWindow::OnInit()
 		m_pSkyboxEffect->attachShaderFromFile("..\\shader\\SkyboxPS.glsl", GL_FRAGMENT_SHADER);
 		m_pSkyboxEffect->linkEffect();
 	}
+	CHECK_GL_ERROR;
 
 	m_skybox.SetGeometry(NPGeoHelper::GetBoxShape(1.f, 1.f, 1.f));
 
@@ -412,6 +425,7 @@ int ModelViewWindow::OnTick(const float deltaTime)
 	{
 		m_Cam.AddPitch(-cursorMoved.x * m_fCamSenX);
 		m_Cam.AddYaw(cursorMoved.y * m_fCamSenY);
+		m_uiEnvInitSamp = 0;
 	}
 	if (m_bIsInRotate)
 	{
@@ -492,7 +506,6 @@ int ModelViewWindow::OnTick(const float deltaTime)
 
 void ModelViewWindow::OnTerminate()
 {
-	testObject.ClearGeometry();
 	NPTwTerminate(m_uiID);
 }
 
@@ -674,34 +687,34 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 			, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
 			, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
 		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
-		m_pBRDFVisEffect->activeEffect();
-		m_pBRDFVisEffect->SetInt("n_th", m_uiNTH);
-		m_pBRDFVisEffect->SetInt("n_ph", m_uiNPH);
-		m_pBRDFVisEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
-		m_pBRDFVisEffect->SetMatrix("view", m_Cam.GetViewMatrix());
-		m_pBRDFVisEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
-		m_pBRDFVisEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+		m_pBRDFModelEffect->activeEffect();
+		m_pBRDFModelEffect->SetInt("n_th", m_uiNTH);
+		m_pBRDFModelEffect->SetInt("n_ph", m_uiNPH);
+		m_pBRDFModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pBRDFModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		m_pBRDFModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pBRDFModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
 
 		glm::vec3 lightDir;
 		lightDir.y = -sin(m_fInYaw);
 		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
 		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
 
-		m_pBRDFVisEffect->SetVec3("lightDir", lightDir.x, lightDir.y, lightDir.z);
-		m_pBRDFVisEffect->SetVec3("lightColor", m_v3LightColor.x * m_fLightIntMultiplier
+		m_pBRDFModelEffect->SetVec3("lightDir", lightDir.x, lightDir.y, lightDir.z);
+		m_pBRDFModelEffect->SetVec3("lightColor", m_v3LightColor.x * m_fLightIntMultiplier
 			, m_v3LightColor.y * m_fLightIntMultiplier, m_v3LightColor.z * m_fLightIntMultiplier);
 		glm::vec3 camDir = m_Cam.GetDir();
-		m_pBRDFVisEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
+		m_pBRDFModelEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
 
 		if (m_bIsLoadTexture)
 		{
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
-			m_pBRDFVisEffect->SetInt("texture_brdf", 0);
+			m_pBRDFModelEffect->SetInt("texture_brdf", 0);
 		}
 
-		m_pModel->Draw(*m_pBRDFVisEffect);
-		m_pBRDFVisEffect->deactiveEffect();
+		m_pModel->Draw(*m_pBRDFModelEffect);
+		m_pBRDFModelEffect->deactiveEffect();
 	}
 
 	if (m_bIsWireFrame)
@@ -712,12 +725,64 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 
 void ModelViewWindow::RenderMethod_BRDFEnvMap()
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	UpdateBRDFData();
+	if (m_uiEnvInitSamp >= m_uiNPH * m_uiNTH)
+		return;
+
+	if (m_uiEnvInitSamp <= 0)
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	//else
+		//glClear(GL_DEPTH_BUFFER_BIT);
+
+	if (m_bIsWireFrame)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	else
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	if (/*m_bIsLoadTexture &&*/ m_pModel)
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+			, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+			, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+		m_pBRDFEnvModelEffect->activeEffect();
+		m_pBRDFEnvModelEffect->SetInt("n_th", m_uiNTH);
+		m_pBRDFEnvModelEffect->SetInt("n_ph", m_uiNPH);
+		m_pBRDFEnvModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pBRDFEnvModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		m_pBRDFEnvModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pBRDFEnvModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+
+		glm::vec3 lightDir;
+		lightDir.y = -sin(m_fInYaw);
+		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
+		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
+
+		m_pBRDFEnvModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
+		glm::vec3 camDir = m_Cam.GetDir();
+		m_pBRDFEnvModelEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
+
+		if (m_bIsLoadTexture)
+		{
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, m_iBRDFEstTex);
+			m_pBRDFEnvModelEffect->SetInt("texture_brdf", 0);
+		}
+
+		m_pModel->Draw(*m_pBRDFEnvModelEffect);
+		m_uiEnvInitSamp += ITR_COUNT;
+		m_pBRDFEnvModelEffect->deactiveEffect();
+
+		glDisable(GL_BLEND);
+	}
 
 	if (m_bIsEnvMapLoaded)
 	{
 		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
-
 		glCullFace(GL_FRONT);
 		NPMathHelper::Mat4x4 noTranCamMath = m_Cam.GetViewMatrix();
 		noTranCamMath._03 = noTranCamMath._13 = noTranCamMath._23 = 0.f;
@@ -736,6 +801,11 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 		glBindTexture(GL_TEXTURE_2D, 0);
 		m_pSkyboxEffect->deactiveEffect();
 		glCullFace(GL_BACK);
+	}
+
+	if (m_bIsWireFrame)
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 }
 
