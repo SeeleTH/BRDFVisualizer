@@ -489,6 +489,16 @@ namespace NPMathHelper
 			return result;
 		}
 
+		inline const bool operator == (const Mat4x4& matOther) const
+		{
+			return (_v40 == matOther._v40 && _v41 == matOther._v41 &&_v42 == matOther._v42 &&_v43 == matOther._v43);
+		}
+
+		inline const bool operator != (const Mat4x4& matOther) const
+		{
+			return !(_v40 == matOther._v40 && _v41 == matOther._v41 &&_v42 == matOther._v42 &&_v43 == matOther._v43);
+		}
+
 	protected:
 		inline static void swap(float& fLeft, float& fRight)
 		{

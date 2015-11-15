@@ -175,6 +175,8 @@ protected:
 	NPGLHelper::Effect* m_pBRDFModelEffect;
 	NPGLHelper::Effect* m_pBRDFEnvModelEffect;
 	unsigned int m_uiEnvInitSamp;
+	NPMathHelper::Mat4x4 m_matLastCam;
+	NPMathHelper::Mat4x4 m_matLastModel;
 
 	// BRDF
 	bool m_bIsBRDFUpdated;

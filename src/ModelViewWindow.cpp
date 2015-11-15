@@ -8,7 +8,7 @@
 #include "oshelper.h"
 #include "atbhelper.h"
 
-#define ITR_COUNT 10;
+#define ITR_COUNT 8
 
 namespace BRDFModel
 {
@@ -425,7 +425,6 @@ int ModelViewWindow::OnTick(const float deltaTime)
 	{
 		m_Cam.AddPitch(-cursorMoved.x * m_fCamSenX);
 		m_Cam.AddYaw(cursorMoved.y * m_fCamSenY);
-		m_uiEnvInitSamp = 0;
 	}
 	if (m_bIsInRotate)
 	{
@@ -726,13 +725,28 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 void ModelViewWindow::RenderMethod_BRDFEnvMap()
 {
 	UpdateBRDFData();
-	if (m_uiEnvInitSamp >= m_uiNPH * m_uiNTH)
+
+	if (NPMathHelper::Mat4x4(m_Cam.GetViewMatrix()) != m_matLastCam)
+	{
+		m_matLastCam = NPMathHelper::Mat4x4(m_Cam.GetViewMatrix());
+		m_uiEnvInitSamp = 0;
+	}
+
+	NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+		, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+		, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+
+	if (modelMat != m_matLastModel)
+	{
+		m_matLastModel = modelMat;
+		m_uiEnvInitSamp = 0;
+	}
+
+	if (m_uiEnvInitSamp + ITR_COUNT > m_uiNPH * m_uiNTH)
 		return;
 
 	if (m_uiEnvInitSamp <= 0)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//else
-		//glClear(GL_DEPTH_BUFFER_BIT);
 
 	if (m_bIsWireFrame)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -745,9 +759,6 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
-		NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
-			, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
-			, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
 		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
 		m_pBRDFEnvModelEffect->activeEffect();
 		m_pBRDFEnvModelEffect->SetInt("n_th", m_uiNTH);
@@ -761,8 +772,6 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 		lightDir.y = -sin(m_fInYaw);
 		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
 		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
-
-		m_pBRDFEnvModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
 		glm::vec3 camDir = m_Cam.GetDir();
 		m_pBRDFEnvModelEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
 
@@ -773,8 +782,10 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 			m_pBRDFEnvModelEffect->SetInt("texture_brdf", 0);
 		}
 
+		m_pBRDFEnvModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
 		m_pModel->Draw(*m_pBRDFEnvModelEffect);
 		m_uiEnvInitSamp += ITR_COUNT;
+
 		m_pBRDFEnvModelEffect->deactiveEffect();
 
 		glDisable(GL_BLEND);
