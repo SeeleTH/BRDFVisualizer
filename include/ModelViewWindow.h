@@ -206,6 +206,7 @@ protected:
 	float m_fInPitch, m_fInYaw;
 
 	// Env Map
+	float m_fEnvMapMultiplier;
 	bool m_bIsEnvMapLoaded;
 	bool m_bIsEnvMapDirty;
 	std::string m_sEnvMapNames[6];

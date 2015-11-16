@@ -12,6 +12,7 @@ uniform sampler2D texture_brdf;
 uniform sampler2D texture_diffuse1;
 uniform sampler2D texture_specular1;
 
+uniform float env_multiplier;
 uniform int n_th;
 uniform int n_ph;
 uniform int init_samp;
@@ -120,9 +121,9 @@ void main()
 		sampDir.y = cos(rad_th);
 		sampDir.x = xz * cos(rad_ph);
 		sampDir.z = -xz * sin(rad_ph);
-		vec3 sampDirG = ttnb * sampDir;
+		vec3 sampDirW = ttnb * sampDir;
 		vec3 brdf = SampleBRDF_Linear(sampDir, -viewDirL);
-		vec3 lightColor = texture(envmap, sampDirG).rgb;
+		vec3 lightColor = env_multiplier * texture(envmap, sampDirW).rgb;
 		result += vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f);
 	}
 	result.a = float(ITR_COUNT) / (init_samp + float(ITR_COUNT));

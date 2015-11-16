@@ -259,6 +259,7 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_pFinalComposeEffect(nullptr)
 	, m_pBRDFEnvModelEffect(nullptr)
 	, m_fExposure(1.f)
+	, m_fEnvMapMultiplier(1.f)
 {
 }
 
@@ -331,6 +332,8 @@ int ModelViewWindow::OnInit()
 		" label='Not loaded yet' help='Loaded Model' group='Environment Map'"));
 	ATB_ASSERT(TwAddButton(mainBar, "loadenvmap"
 		, LoadCubemapButton, this, "label='Load Map' group='Environment Map'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Env Multiplier", TW_TYPE_FLOAT, &m_fEnvMapMultiplier,
+		" label='Multiplier' help='Multiply Environment map value' group='Environment Map'"));
 
 	ATB_ASSERT(TwAddSeparator(mainBar, "instructionsep", ""));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='LClick+Drag: Rot Light dir'"));
@@ -768,6 +771,7 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 		m_pBRDFEnvModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
 		m_pBRDFEnvModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
 		m_pBRDFEnvModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
+		m_pBRDFEnvModelEffect->SetFloat("env_multiplier", m_fEnvMapMultiplier);
 
 		glm::vec3 lightDir;
 		lightDir.y = -sin(m_fInYaw);
