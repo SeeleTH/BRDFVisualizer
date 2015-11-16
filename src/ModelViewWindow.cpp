@@ -59,6 +59,12 @@ namespace BRDFModel
 
 		glBindVertexArray(0);
 
+		std::vector<NPMathHelper::Vec3> points;
+		for (auto &vertex : m_vertices)
+		{
+			points.push_back(vertex.position);
+		}
+		m_space = SphericalSpace::CalcSpaceFromPoints(points);
 	}
 
 
@@ -98,6 +104,11 @@ namespace BRDFModel
 		{
 			Mesh *loadedMesh = ProcessMesh(scene->mMeshes[node->mMeshes[i]], scene);
 			m_meshes.push_back(loadedMesh);
+
+			if (i == 0)
+				m_space = loadedMesh->m_space;
+			else
+				m_space = m_space.Merge(loadedMesh->m_space);
 		}
 
 		for (unsigned int i = 0; i < node->mNumChildren; i++)
@@ -378,6 +389,7 @@ int ModelViewWindow::OnInit()
 	CHECK_GL_ERROR;
 
 	m_skybox.SetGeometry(NPGeoHelper::GetBoxShape(1.f, 1.f, 1.f));
+	m_floor.SetGeometry(NPGeoHelper::GetFloorPlaneShape(10.f, 10.f));
 
 	CHECK_GL_ERROR;
 	glGenFramebuffers(1, &m_uiHDRFBO);
@@ -716,6 +728,16 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 		}
 
 		m_pModel->Draw(*m_pBRDFModelEffect);
+
+		// Draw Floor Plane
+		NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
+		NPMathHelper::Mat4x4 floorTranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
+		m_pBRDFModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor());
+		m_pBRDFModelEffect->SetMatrix("tranInvModel", floorTranInvModelMat.GetDataColumnMajor());
+		glBindVertexArray(m_floor.GetVAO());
+		glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+
 		m_pBRDFModelEffect->deactiveEffect();
 	}
 

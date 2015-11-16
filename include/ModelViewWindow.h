@@ -12,19 +12,48 @@
 namespace BRDFModel
 {
 	struct SphericalSpace {
-		glm::vec3 m_v3Center;
+		NPMathHelper::Vec3 m_v3Center;
 		float m_fRadius;
+
+		SphericalSpace() : m_v3Center(0.f, 0.f, 0.f), m_fRadius(0.f)
+		{ }
+
+		void Expand(NPMathHelper::Vec3 &point)
+		{
+			NPMathHelper::Vec3 cenToExpand = point - m_v3Center;
+			float cenToExpandLength = NPMathHelper::Vec3::length(cenToExpand);
+			if (cenToExpandLength > m_fRadius)
+			{
+				NPMathHelper::Vec3 otherSideEdge = m_v3Center - NPMathHelper::Vec3::normalize(cenToExpand) * m_fRadius;
+				m_v3Center = (otherSideEdge + point) * 0.5f;
+				m_fRadius = NPMathHelper::Vec3::length(m_v3Center - otherSideEdge);
+			}
+		}
 
 		SphericalSpace Merge(const SphericalSpace &other)
 		{
 			SphericalSpace result;
-			glm::vec3 toOther = other.m_v3Center - m_v3Center;
-			float lenToOther = glm::length(toOther);
+			NPMathHelper::Vec3 toOther = other.m_v3Center - m_v3Center;
+			float lenToOther = NPMathHelper::Vec3::length(toOther);
 			float maxForward = glm::max(m_fRadius, other.m_fRadius + lenToOther);
 			float maxBackward = glm::max(m_fRadius, other.m_fRadius - lenToOther);
-			glm::vec3 toOtherDir = glm::normalize(toOther);
+			NPMathHelper::Vec3 toOtherDir = NPMathHelper::Vec3::normalize(toOther);
 			result.m_fRadius = (maxForward + maxBackward) * 0.5f;
 			result.m_v3Center = m_v3Center + toOtherDir * (maxForward - maxBackward * 0.5f);
+			return result;
+		}
+
+		static SphericalSpace CalcSpaceFromPoints(std::vector<NPMathHelper::Vec3> &points)
+		{
+			SphericalSpace result;
+			if (points.size() <= 0)
+				return result;
+			result.m_v3Center = points[0];
+			for (auto it = points.begin() + 1; it != points.end(); it++)
+			{
+				result.Expand(*it);
+			}
+
 			return result;
 		}
 	};
@@ -46,6 +75,8 @@ namespace BRDFModel
 		std::vector<Vertex> m_vertices;
 		std::vector<GLuint> m_indices;
 		std::vector<Texture> m_textures;
+
+		SphericalSpace m_space;
 
 		Mesh(std::vector<Vertex> vertices, std::vector<GLuint> indices, std::vector<Texture> textures)
 			: m_vertices(vertices)
@@ -72,8 +103,6 @@ namespace BRDFModel
 		GLuint m_iVAO;
 		GLuint m_iVBO;
 		GLuint m_iEBO;
-
-		SphericalSpace m_space;
 
 		void SetupMesh();
 	};
@@ -232,6 +261,7 @@ protected:
 	//Other object
 	NPGLHelper::Effect* m_pSkyboxEffect;
 	NPGLHelper::RenderObject m_skybox;
+	NPGLHelper::RenderObject m_floor;
 };
 
 #endif

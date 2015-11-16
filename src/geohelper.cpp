@@ -95,6 +95,50 @@ namespace NPGeoHelper
 	{
 		Geometry result;
 
+		{
+			vertex vert;
+			vert.pos = Vec3(-width*0.5f, 0.f, -height*0.5f);
+			vert.norm = Vec3(0.f, 1.f, 0.f);
+			vert.binorm = Vec3(0.f, 0.f, 1.f);
+			vert.tan = Vec3(1.f, 0.f, 0.f);
+			vert.tex = Vec2(0.f, 0.f);
+			result.vertices.push_back(vert);
+		}
+		{
+			vertex vert;
+			vert.pos = Vec3(width*0.5f, 0.f, -height*0.5f);
+			vert.norm = Vec3(0.f, 1.f, 0.f);
+			vert.binorm = Vec3(0.f, 0.f, 1.f);
+			vert.tan = Vec3(1.f, 0.f, 0.f);
+			vert.tex = Vec2(1.f, 0.f);
+			result.vertices.push_back(vert);
+		}
+		{
+			vertex vert;
+			vert.pos = Vec3(width*0.5f, 0.f, height*0.5f);
+			vert.norm = Vec3(0.f, 1.f, 0.f);
+			vert.binorm = Vec3(0.f, 0.f, 1.f);
+			vert.tan = Vec3(1.f, 0.f, 0.f);
+			vert.tex = Vec2(1.f, 1.f);
+			result.vertices.push_back(vert);
+		}
+		{
+			vertex vert;
+			vert.pos = Vec3(-width*0.5f, 0.f, height*0.5f);
+			vert.norm = Vec3(0.f, 1.f, 0.f);
+			vert.binorm = Vec3(0.f, 0.f, 1.f);
+			vert.tan = Vec3(1.f, 0.f, 0.f);
+			vert.tex = Vec2(0.f, 1.f);
+			result.vertices.push_back(vert);
+		}
+		result.indices.push_back(0);
+		result.indices.push_back(3);
+		result.indices.push_back(1);
+
+		result.indices.push_back(2);
+		result.indices.push_back(1);
+		result.indices.push_back(3);
+
 		return result;
 	}
 
