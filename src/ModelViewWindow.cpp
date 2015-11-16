@@ -8,7 +8,7 @@
 #include "oshelper.h"
 #include "atbhelper.h"
 
-#define ITR_COUNT 8
+#define ITR_COUNT 1
 
 namespace BRDFModel
 {
@@ -767,6 +767,7 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 		m_pBRDFEnvModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
 		m_pBRDFEnvModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
 		m_pBRDFEnvModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+		m_pBRDFEnvModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
 
 		glm::vec3 lightDir;
 		lightDir.y = -sin(m_fInYaw);
@@ -782,7 +783,13 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 			m_pBRDFEnvModelEffect->SetInt("texture_brdf", 0);
 		}
 
-		m_pBRDFEnvModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
+		if (m_bIsEnvMapLoaded)
+		{
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap);
+			m_pBRDFEnvModelEffect->SetInt("envmap", 4);
+		}
+
 		m_pModel->Draw(*m_pBRDFEnvModelEffect);
 		m_uiEnvInitSamp += ITR_COUNT;
 

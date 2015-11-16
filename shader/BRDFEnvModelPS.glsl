@@ -1,6 +1,6 @@
 #version 330 core
 #define M_PI 3.1415926535897932384626433832795
-#define ITR_COUNT 8
+#define ITR_COUNT 1
 
 in vec2 outTexCoord;
 in vec3 outNormal;
@@ -101,8 +101,12 @@ void main()
 	vec3 normal = normalize(outNormal);
 	vec3 tangent = normalize(outTangent.xyz - dot(normal, outTangent.xyz) * normal);
 	vec3 bitangent = normalize(cross(tangent, normal));
-	mat3 tbn = transpose(mat3(tangent, normal, bitangent));
-	vec4 result;
+	mat3 ttnb = mat3(tangent, normal, bitangent);
+	mat3 tnb = transpose(ttnb);
+
+	vec4 result = vec4(0.f, 0.f, 0.f, 0.f);
+	vec3 viewDirL = tnb * viewDir;
+	vec4 diff = texture(texture_diffuse1, outTexCoord);
 
 	for (int i = 0; i < ITR_COUNT; i++)
 	{
@@ -116,13 +120,11 @@ void main()
 		sampDir.y = cos(rad_th);
 		sampDir.x = xz * cos(rad_ph);
 		sampDir.z = -xz * sin(rad_ph);
-		vec3 viewDirL = tbn * viewDir;
+		vec3 sampDirG = ttnb * sampDir;
 		vec3 brdf = SampleBRDF_Linear(sampDir, -viewDirL);
-		vec4 diff = texture(texture_diffuse1, outTexCoord);
-		vec3 lightColor = texture(envmap, sampDir).rgb;
-		result += vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f,1.f,0.f)), 0.f, 1.f);
+		vec3 lightColor = texture(envmap, sampDirG).rgb;
+		result += vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f);
 	}
-	int maxsampling = n_th * n_ph;
 	result.a = float(ITR_COUNT) / (init_samp + float(ITR_COUNT));
 	color = result;
 }

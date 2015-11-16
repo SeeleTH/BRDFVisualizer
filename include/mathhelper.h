@@ -441,6 +441,14 @@ namespace NPMathHelper
 				0.f, 0.f, -1.f, 0.f);
 		}
 
+		inline static Mat4x4 orthogonalProjection(const float width, const float height, const float near, const float far)
+		{
+			return Mat4x4(2.f / width, 0.f, 0.f, 0.f,
+				0.f, 2.f / height, 0.f, 0.f,
+				0.f, 0.f, 1.f / (far - near), 0.f,
+				0.f, 0.f, near / (near - far), 1.f);
+		}
+
 		inline static Mat4x4 lookAt(const Vec3& eyePos, const Vec3& eyeTarget, const Vec3& eyeUp)
 		{
 			Vec3 dir = Vec3::normalize(eyeTarget - eyePos);
