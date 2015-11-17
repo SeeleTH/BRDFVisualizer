@@ -4,11 +4,12 @@
 in vec2 outTexCoord;
 in vec3 outNormal;
 in vec4 outTangent;
+in vec3 outPosW;
 
 out vec4 color;
 
-uniform sampler2D texture_normal1;
 uniform sampler2D texture_diffuse1;
+uniform sampler2D texture_normal1;
 uniform sampler2D texture_specular1;
 
 struct Material {
@@ -27,7 +28,7 @@ struct DirLight {
 
 uniform Material material;
 uniform DirLight light;
-uniform vec3 viewDir;
+uniform vec3 viewPos;
 
 void main()
 {
@@ -36,8 +37,9 @@ void main()
 	vec3 b = normalize(cross(t, n));
 	mat3 tbn = mat3(t, n, b);
 	mat3 ttbn = transpose(tbn);
+	vec3 viewDir = normalize(outPosW - viewPos);
 
-	vec3 normValue = texture(texture_normal1, outTexCoord).rgb;
+	vec3 normValue = texture(texture_normal1, outTexCoord).rbg;
 	normValue = normValue * 2.f - vec3(1.f);
 	vec4 diffTex = texture(texture_diffuse1, outTexCoord);
 	vec3 normalW = tbn * normValue;

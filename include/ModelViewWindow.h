@@ -303,8 +303,11 @@ protected:
 	//Floor
 	bool m_bIsShowFloor;
 	NPGLHelper::Effect* m_pBlinnPhongNormalModelEffect;
+	NPGLHelper::Effect* m_pDiffuseNormalModelEffect;
 	NPGLHelper::RenderObject m_floor;
 	GLuint m_iFloorTex;
+	GLuint m_iFloorNormalTex;
+	Material m_floorMaterial;
 };
 
 #endif

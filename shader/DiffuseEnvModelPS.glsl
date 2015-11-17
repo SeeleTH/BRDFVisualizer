@@ -4,6 +4,7 @@
 in vec2 outTexCoord;
 in vec3 outNormal;
 in vec4 outTangent;
+in vec3 outPosW;
 
 out vec4 color;
 
@@ -15,7 +16,7 @@ uniform int n_th;
 uniform int n_ph;
 uniform vec3 lightDir;
 uniform vec3 lightColor;
-uniform vec3 viewDir;
+uniform vec3 viewPos;
 
 void GetVectorIndex(vec3 value, out float th, out float ph)
 {

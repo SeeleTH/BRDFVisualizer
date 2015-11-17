@@ -88,9 +88,6 @@
     <None Include="..\shader\BRDFModelPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="..\shader\BRDFModelVS.glsl">
-      <Filter>Shader Files</Filter>
-    </None>
     <None Include="..\shader\SkyboxPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
@@ -103,28 +100,13 @@
     <None Include="..\shader\FinalComposePS.glsl">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="..\shader\BRDFEnvModelVS.glsl">
-      <Filter>Shader Files</Filter>
-    </None>
     <None Include="..\shader\BRDFEnvModelPS.glsl">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="..\shader\DiffuseEnvModelVS.glsl">
       <Filter>Shader Files</Filter>
     </None>
     <None Include="..\shader\DiffuseModelPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="..\shader\DiffuseModelVS.glsl">
-      <Filter>Shader Files</Filter>
-    </None>
     <None Include="..\shader\BlinnPhoneEnvModelPS.glsl">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="..\shader\BlinnPhongEnvModelVS.glsl">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="..\shader\BlinnPhongModelVS.glsl">
       <Filter>Shader Files</Filter>
     </None>
     <None Include="..\shader\DiffuseEnvModelPS.glsl">
@@ -134,6 +116,12 @@
       <Filter>Shader Files</Filter>
     </None>
     <None Include="..\shader\BlinnPhongModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\ModelVS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\DiffuseNormalModelPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
   </ItemGroup>

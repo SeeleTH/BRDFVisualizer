@@ -22,7 +22,7 @@ namespace NPGeoHelper
 		std::vector<unsigned int> indices;
 	};
 	Geometry GetSlicedHemisphereShape(const float radius, const unsigned int vertSlice, unsigned int horiSlice);
-	Geometry GetFloorPlaneShape(const float width, const float height);
+	Geometry GetFloorPlaneShape(const float width, const float height, const float uvmultiplier = 1.f);
 	Geometry GetBoxShape(const float width, const float height, const float depth);
 }
 

@@ -270,6 +270,7 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_pDiffuseModelEffect(nullptr)
 	, m_pBlinnPhongModelEffect(nullptr)
 	, m_pBlinnPhongNormalModelEffect(nullptr)
+	, m_pDiffuseNormalModelEffect(nullptr)
 	, m_pBRDFModelEffect(nullptr)
 	, m_pDiffuseEnvModelEffect(nullptr)
 	, m_pBlinnPhongEnvModelEffect(nullptr)
@@ -277,6 +278,8 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_fExposure(1.f)
 	, m_fEnvMapMultiplier(1.f)
 	, m_bIsShowFloor(true)
+	, m_iFloorTex(0)
+	, m_iFloorNormalTex(0)
 {
 }
 
@@ -386,7 +389,7 @@ int ModelViewWindow::OnInit()
 	if (!m_pDiffuseModelEffect->GetIsLinked())
 	{
 		m_pDiffuseModelEffect->initEffect();
-		m_pDiffuseModelEffect->attachShaderFromFile("..\\shader\\DiffuseModelVS.glsl", GL_VERTEX_SHADER);
+		m_pDiffuseModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
 		m_pDiffuseModelEffect->attachShaderFromFile("..\\shader\\DiffuseModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pDiffuseModelEffect->linkEffect();
 	}
@@ -395,7 +398,7 @@ int ModelViewWindow::OnInit()
 	if (!m_pBlinnPhongModelEffect->GetIsLinked())
 	{
 		m_pBlinnPhongModelEffect->initEffect();
-		m_pBlinnPhongModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBlinnPhongModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
 		m_pBlinnPhongModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pBlinnPhongModelEffect->linkEffect();
 	}
@@ -404,16 +407,25 @@ int ModelViewWindow::OnInit()
 	if (!m_pBlinnPhongNormalModelEffect->GetIsLinked())
 	{
 		m_pBlinnPhongNormalModelEffect->initEffect();
-		m_pBlinnPhongNormalModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBlinnPhongNormalModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
 		m_pBlinnPhongNormalModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongNormalModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pBlinnPhongNormalModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
+	m_pDiffuseNormalModelEffect = m_pShareContent->GetEffect("DiffuseNormalModelEffect");
+	if (!m_pDiffuseNormalModelEffect->GetIsLinked())
+	{
+		m_pDiffuseNormalModelEffect->initEffect();
+		m_pDiffuseNormalModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
+		m_pDiffuseNormalModelEffect->attachShaderFromFile("..\\shader\\DiffuseNormalModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pDiffuseNormalModelEffect->linkEffect();
 	}
 	CHECK_GL_ERROR;
 	m_pBRDFModelEffect = m_pShareContent->GetEffect("BRDFModelEffect");
 	if (!m_pBRDFModelEffect->GetIsLinked())
 	{
 		m_pBRDFModelEffect->initEffect();
-		m_pBRDFModelEffect->attachShaderFromFile("..\\shader\\BRDFModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBRDFModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
 		m_pBRDFModelEffect->attachShaderFromFile("..\\shader\\BRDFModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pBRDFModelEffect->linkEffect();
 	}
@@ -422,7 +434,7 @@ int ModelViewWindow::OnInit()
 	if (!m_pDiffuseEnvModelEffect->GetIsLinked())
 	{
 		m_pDiffuseEnvModelEffect->initEffect();
-		m_pDiffuseEnvModelEffect->attachShaderFromFile("..\\shader\\DiffuseEnvModelVS.glsl", GL_VERTEX_SHADER);
+		m_pDiffuseEnvModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
 		m_pDiffuseEnvModelEffect->attachShaderFromFile("..\\shader\\DiffuseEnvModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pDiffuseEnvModelEffect->linkEffect();
 	}
@@ -431,7 +443,7 @@ int ModelViewWindow::OnInit()
 	if (!m_pBlinnPhongEnvModelEffect->GetIsLinked())
 	{
 		m_pBlinnPhongEnvModelEffect->initEffect();
-		m_pBlinnPhongEnvModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongEnvModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBlinnPhongEnvModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
 		m_pBlinnPhongEnvModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongEnvModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pBlinnPhongEnvModelEffect->linkEffect();
 	}
@@ -440,7 +452,7 @@ int ModelViewWindow::OnInit()
 	if (!m_pBRDFEnvModelEffect->GetIsLinked())
 	{
 		m_pBRDFEnvModelEffect->initEffect();
-		m_pBRDFEnvModelEffect->attachShaderFromFile("..\\shader\\BRDFEnvModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBRDFEnvModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
 		m_pBRDFEnvModelEffect->attachShaderFromFile("..\\shader\\BRDFEnvModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pBRDFEnvModelEffect->linkEffect();
 	}
@@ -456,7 +468,14 @@ int ModelViewWindow::OnInit()
 	CHECK_GL_ERROR;
 
 	m_skybox.SetGeometry(NPGeoHelper::GetBoxShape(1.f, 1.f, 1.f));
-	m_floor.SetGeometry(NPGeoHelper::GetFloorPlaneShape(10.f, 10.f));
+	m_floor.SetGeometry(NPGeoHelper::GetFloorPlaneShape(10.f, 10.f, 10.f), 1);
+	//m_floorMaterial.ambient = NPMathHelper::Vec3(1.f, 1.f, 1.f);
+	//m_floorMaterial.diffuse = NPMathHelper::Vec3(1.f, 1.f, 1.f);
+	//m_floorMaterial.specular = NPMathHelper::Vec3(1.f, 1.f, 1.f);
+	m_floorMaterial.shininess = 50.f;
+
+	NPGLHelper::loadTextureFromFile("..\\texture\\floor.png", m_iFloorTex, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR, false);
+	NPGLHelper::loadTextureFromFile("..\\texture\\floor_nmap.png", m_iFloorNormalTex, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR, false);
 
 	CHECK_GL_ERROR;
 	glGenFramebuffers(1, &m_uiHDRFBO);
@@ -779,7 +798,102 @@ void ModelViewWindow::UpdateBRDFData()
 
 void ModelViewWindow::RenderMethod_DiffuseDirLight()
 {
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	if (m_bIsWireFrame)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	else
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	UpdateBRDFData();
+	if (/*m_bIsLoadTexture &&*/ m_pModel)
+	{
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+			, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+			, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+		m_pDiffuseModelEffect->activeEffect();
+		m_pDiffuseModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pDiffuseModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		m_pDiffuseModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pDiffuseModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+
+		m_dirLight.dir._y = -sin(m_fInYaw);
+		m_dirLight.dir._x = -cos(m_fInYaw) * sin(m_fInPitch);
+		m_dirLight.dir._z = -cos(m_fInYaw) * cos(m_fInPitch);
+
+		m_pDiffuseModelEffect->SetVec3("material.ambient", m_modelBlinnPhongMaterial.ambient);
+		m_pDiffuseModelEffect->SetVec3("material.diffuse", m_modelBlinnPhongMaterial.diffuse);
+		m_pDiffuseModelEffect->SetVec3("material.specular", m_modelBlinnPhongMaterial.specular);
+		m_pDiffuseModelEffect->SetFloat("material.shininess", m_modelBlinnPhongMaterial.shininess);
+
+		m_pDiffuseModelEffect->SetVec3("light.ambient", m_dirLight.ambient * m_fLightIntMultiplier);
+		m_pDiffuseModelEffect->SetVec3("light.diffuse", m_dirLight.diffuse * m_fLightIntMultiplier);
+		m_pDiffuseModelEffect->SetVec3("light.specular", m_dirLight.specular * m_fLightIntMultiplier);
+		m_pDiffuseModelEffect->SetVec3("light.dir", m_dirLight.dir);
+
+		m_pDiffuseModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+		m_pModel->Draw(*m_pDiffuseModelEffect);
+
+
+		m_pDiffuseModelEffect->deactiveEffect();
+	}
+
+	if (m_bIsShowFloor)
+	{
+
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::Identity();
+		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+
+		m_pDiffuseNormalModelEffect->activeEffect();
+		m_pDiffuseNormalModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pDiffuseNormalModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		m_pDiffuseNormalModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pDiffuseNormalModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+
+		m_dirLight.dir._y = -sin(m_fInYaw);
+		m_dirLight.dir._x = -cos(m_fInYaw) * sin(m_fInPitch);
+		m_dirLight.dir._z = -cos(m_fInYaw) * cos(m_fInPitch);
+
+		m_pDiffuseNormalModelEffect->SetVec3("material.ambient", m_floorMaterial.ambient);
+		m_pDiffuseNormalModelEffect->SetVec3("material.diffuse", m_floorMaterial.diffuse);
+		m_pDiffuseNormalModelEffect->SetVec3("material.specular", m_floorMaterial.specular);
+		m_pDiffuseNormalModelEffect->SetFloat("material.shininess", m_floorMaterial.shininess);
+
+		m_pDiffuseNormalModelEffect->SetVec3("light.ambient", m_dirLight.ambient * m_fLightIntMultiplier);
+		m_pDiffuseNormalModelEffect->SetVec3("light.diffuse", m_dirLight.diffuse * m_fLightIntMultiplier);
+		m_pDiffuseNormalModelEffect->SetVec3("light.specular", m_dirLight.specular * m_fLightIntMultiplier);
+		m_pDiffuseNormalModelEffect->SetVec3("light.dir", m_dirLight.dir);
+
+		m_pDiffuseNormalModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+		glActiveTexture(GL_TEXTURE0); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_iFloorTex); CHECK_GL_ERROR;
+		m_pDiffuseNormalModelEffect->SetInt("texture_diffuse1", 0); CHECK_GL_ERROR;
+
+		glActiveTexture(GL_TEXTURE1); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_iFloorNormalTex); CHECK_GL_ERROR;
+		m_pDiffuseNormalModelEffect->SetInt("texture_normal1", 1); CHECK_GL_ERROR;
+
+		// Draw Floor Plane
+		NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
+		NPMathHelper::Mat4x4 floorTranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
+		m_pDiffuseNormalModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor()); CHECK_GL_ERROR;
+		m_pDiffuseNormalModelEffect->SetMatrix("tranInvModel", floorTranInvModelMat.GetDataColumnMajor()); CHECK_GL_ERROR;
+		glBindVertexArray(m_floor.GetVAO()); CHECK_GL_ERROR;
+		glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0); CHECK_GL_ERROR;
+		glBindVertexArray(0);
+
+		m_pDiffuseNormalModelEffect->deactiveEffect();
+	}
+
+	if (m_bIsWireFrame)
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
 }
 
 void ModelViewWindow::RenderMethod_BlinnPhongDirLight()
@@ -819,21 +933,61 @@ void ModelViewWindow::RenderMethod_BlinnPhongDirLight()
 		m_pBlinnPhongModelEffect->SetVec3("light.specular", m_dirLight.specular * m_fLightIntMultiplier);
 		m_pBlinnPhongModelEffect->SetVec3("light.dir", m_dirLight.dir);
 
-		glm::vec3 camDir = m_Cam.GetDir();
-		m_pBlinnPhongModelEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
+		m_pBlinnPhongModelEffect->SetVec3("viewPos", m_Cam.GetPos());
 
 		m_pModel->Draw(*m_pBlinnPhongModelEffect);
 
-		// Draw Floor Plane
-		//NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
-		//NPMathHelper::Mat4x4 floorTranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
-		//m_pBlinnPhongModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor());
-		//m_pBlinnPhongModelEffect->SetMatrix("tranInvModel", floorTranInvModelMat.GetDataColumnMajor());
-		//glBindVertexArray(m_floor.GetVAO());
-		//glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0);
-		//glBindVertexArray(0);
 
 		m_pBlinnPhongModelEffect->deactiveEffect();
+	}
+
+	if (m_bIsShowFloor)
+	{
+
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::Identity();
+		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+
+		m_pBlinnPhongNormalModelEffect->activeEffect();
+		m_pBlinnPhongNormalModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pBlinnPhongNormalModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		m_pBlinnPhongNormalModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pBlinnPhongNormalModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+
+		m_dirLight.dir._y = -sin(m_fInYaw);
+		m_dirLight.dir._x = -cos(m_fInYaw) * sin(m_fInPitch);
+		m_dirLight.dir._z = -cos(m_fInYaw) * cos(m_fInPitch);
+
+		m_pBlinnPhongNormalModelEffect->SetVec3("material.ambient", m_floorMaterial.ambient);
+		m_pBlinnPhongNormalModelEffect->SetVec3("material.diffuse", m_floorMaterial.diffuse);
+		m_pBlinnPhongNormalModelEffect->SetVec3("material.specular", m_floorMaterial.specular);
+		m_pBlinnPhongNormalModelEffect->SetFloat("material.shininess", m_floorMaterial.shininess);
+
+		m_pBlinnPhongNormalModelEffect->SetVec3("light.ambient", m_dirLight.ambient * m_fLightIntMultiplier);
+		m_pBlinnPhongNormalModelEffect->SetVec3("light.diffuse", m_dirLight.diffuse * m_fLightIntMultiplier);
+		m_pBlinnPhongNormalModelEffect->SetVec3("light.specular", m_dirLight.specular * m_fLightIntMultiplier);
+		m_pBlinnPhongNormalModelEffect->SetVec3("light.dir", m_dirLight.dir);
+
+		m_pBlinnPhongNormalModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+		glActiveTexture(GL_TEXTURE0); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_iFloorTex); CHECK_GL_ERROR;
+		m_pBlinnPhongNormalModelEffect->SetInt("texture_diffuse1", 0); CHECK_GL_ERROR;
+
+		glActiveTexture(GL_TEXTURE1); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_iFloorNormalTex); CHECK_GL_ERROR;
+		m_pBlinnPhongNormalModelEffect->SetInt("texture_normal1", 1); CHECK_GL_ERROR;
+
+		// Draw Floor Plane
+		NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
+		NPMathHelper::Mat4x4 floorTranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
+		m_pBlinnPhongNormalModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor()); CHECK_GL_ERROR;
+		m_pBlinnPhongNormalModelEffect->SetMatrix("tranInvModel", floorTranInvModelMat.GetDataColumnMajor()); CHECK_GL_ERROR;
+		glBindVertexArray(m_floor.GetVAO()); CHECK_GL_ERROR;
+		glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0); CHECK_GL_ERROR;
+		glBindVertexArray(0);
+
+		m_pBlinnPhongNormalModelEffect->deactiveEffect();
 	}
 
 	if (m_bIsWireFrame)
@@ -875,8 +1029,7 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 		m_pBRDFModelEffect->SetVec3("lightDir", lightDir.x, lightDir.y, lightDir.z);
 		m_pBRDFModelEffect->SetVec3("lightColor", m_v3LightColor.x * m_fLightIntMultiplier
 			, m_v3LightColor.y * m_fLightIntMultiplier, m_v3LightColor.z * m_fLightIntMultiplier);
-		glm::vec3 camDir = m_Cam.GetDir();
-		m_pBRDFModelEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
+		m_pBRDFModelEffect->SetVec3("viewPos", m_Cam.GetPos());
 
 		if (m_bIsLoadTexture)
 		{
@@ -886,17 +1039,56 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 		}
 
 		m_pModel->Draw(*m_pBRDFModelEffect);
+		m_pBRDFModelEffect->deactiveEffect();
+	}
+
+	if (m_bIsShowFloor)
+	{
+
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::Identity();
+		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+
+		m_pBlinnPhongNormalModelEffect->activeEffect();
+		m_pBlinnPhongNormalModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pBlinnPhongNormalModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		m_pBlinnPhongNormalModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pBlinnPhongNormalModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+
+		m_dirLight.dir._y = -sin(m_fInYaw);
+		m_dirLight.dir._x = -cos(m_fInYaw) * sin(m_fInPitch);
+		m_dirLight.dir._z = -cos(m_fInYaw) * cos(m_fInPitch);
+
+		m_pBlinnPhongNormalModelEffect->SetVec3("material.ambient", m_floorMaterial.ambient);
+		m_pBlinnPhongNormalModelEffect->SetVec3("material.diffuse", m_floorMaterial.diffuse);
+		m_pBlinnPhongNormalModelEffect->SetVec3("material.specular", m_floorMaterial.specular);
+		m_pBlinnPhongNormalModelEffect->SetFloat("material.shininess", m_floorMaterial.shininess);
+
+		m_pBlinnPhongNormalModelEffect->SetVec3("light.ambient", m_dirLight.ambient * m_fLightIntMultiplier);
+		m_pBlinnPhongNormalModelEffect->SetVec3("light.diffuse", m_dirLight.diffuse * m_fLightIntMultiplier);
+		m_pBlinnPhongNormalModelEffect->SetVec3("light.specular", m_dirLight.specular * m_fLightIntMultiplier);
+		m_pBlinnPhongNormalModelEffect->SetVec3("light.dir", m_dirLight.dir);
+
+		m_pBlinnPhongNormalModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+		glActiveTexture(GL_TEXTURE0); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_iFloorTex); CHECK_GL_ERROR;
+		m_pBlinnPhongNormalModelEffect->SetInt("texture_diffuse1", 0); CHECK_GL_ERROR;
+
+		glActiveTexture(GL_TEXTURE1); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_iFloorNormalTex); CHECK_GL_ERROR;
+		m_pBlinnPhongNormalModelEffect->SetInt("texture_normal1", 1); CHECK_GL_ERROR;
 
 		// Draw Floor Plane
-		//NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
-		//NPMathHelper::Mat4x4 floorTranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
-		//m_pBRDFModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor());
-		//m_pBRDFModelEffect->SetMatrix("tranInvModel", floorTranInvModelMat.GetDataColumnMajor());
-		//glBindVertexArray(m_floor.GetVAO());
-		//glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0);
-		//glBindVertexArray(0);
+		NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
+		NPMathHelper::Mat4x4 floorTranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
+		m_pBlinnPhongNormalModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor()); CHECK_GL_ERROR;
+		m_pBlinnPhongNormalModelEffect->SetMatrix("tranInvModel", floorTranInvModelMat.GetDataColumnMajor()); CHECK_GL_ERROR;
+		glBindVertexArray(m_floor.GetVAO()); CHECK_GL_ERROR;
+		glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0); CHECK_GL_ERROR;
+		glBindVertexArray(0);
 
-		m_pBRDFModelEffect->deactiveEffect();
+		m_pBlinnPhongNormalModelEffect->deactiveEffect();
 	}
 
 	if (m_bIsWireFrame)
@@ -967,8 +1159,7 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 		lightDir.y = -sin(m_fInYaw);
 		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
 		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
-		glm::vec3 camDir = m_Cam.GetDir();
-		m_pBRDFEnvModelEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
+		m_pBRDFEnvModelEffect->SetVec3("viewPos", m_Cam.GetPos());
 
 		if (m_bIsLoadTexture)
 		{

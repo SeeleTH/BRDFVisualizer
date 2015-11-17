@@ -27,6 +27,7 @@ namespace NPCamHelper
 			, m_fYaw(yaw)
 			, m_fYawMin(0.f)
 			, m_fYawMax(M_PI*0.49f)
+			, m_v3CamPos(0.f,0.f,0.f)
 		{
 			m_v3CamTarget.x = m_v3CamTarget.y = m_v3CamTarget.z = 0.f;
 			m_v3CamUp.x = m_v3CamUp.z = 0.f;
@@ -90,6 +91,15 @@ namespace NPCamHelper
 			result.x = -temp * sin(m_fPitch);
 			return glm::normalize(result);
 		}
+		inline const NPMathHelper::Vec3 GetPos()
+		{
+			if (m_bIsViewMatDirty)
+			{
+				UpdateViewMatrix();
+				m_bIsViewMatDirty = false;
+			}
+			return m_v3CamPos;
+		}
 
 		virtual void UpdateViewMatrix()
 		{
@@ -98,7 +108,7 @@ namespace NPCamHelper
 			float temp = cos(m_fYaw) * m_fRadius;
 			float camZ = temp * cos(m_fPitch);
 			float camX = temp * sin(m_fPitch);
-
+			m_v3CamPos = NPMathHelper::Vec3(camX, camY, camZ);
 			//m_m4ViewMat = glm::lookAt(m_v3CamTarget + glm::vec3(camX, camY, camZ), m_v3CamTarget, m_v3CamUp);
 			m_m4ViewMat2 = NPMathHelper::Mat4x4::lookAt(
 				NPMathHelper::Vec3(m_v3CamTarget.x + camX, m_v3CamTarget.y + camY, m_v3CamTarget.z + camZ), NPMathHelper::Vec3(m_v3CamTarget.x, m_v3CamTarget.y, m_v3CamTarget.z), NPMathHelper::Vec3(m_v3CamUp.x, m_v3CamUp.y, m_v3CamUp.z));
@@ -122,6 +132,7 @@ namespace NPCamHelper
 		float m_fYawMin;
 		float m_fYawMax;
 		float m_fRadius;
+		NPMathHelper::Vec3 m_v3CamPos;
 		glm::vec3 m_v3CamTarget;
 		glm::vec3 m_v3CamUp;
 		glm::mat4x4 m_m4ViewMat;

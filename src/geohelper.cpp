@@ -91,7 +91,7 @@ namespace NPGeoHelper
 		return result;
 	}
 
-	Geometry GetFloorPlaneShape(const float width, const float height)
+	Geometry GetFloorPlaneShape(const float width, const float height, const float uvmultiplier)
 	{
 		Geometry result;
 
@@ -101,7 +101,7 @@ namespace NPGeoHelper
 			vert.norm = Vec3(0.f, 1.f, 0.f);
 			vert.binorm = Vec3(0.f, 0.f, 1.f);
 			vert.tan = Vec3(1.f, 0.f, 0.f);
-			vert.tex = Vec2(0.f, 0.f);
+			vert.tex = Vec2(0.f, 0.f) * uvmultiplier;
 			result.vertices.push_back(vert);
 		}
 		{
@@ -110,7 +110,7 @@ namespace NPGeoHelper
 			vert.norm = Vec3(0.f, 1.f, 0.f);
 			vert.binorm = Vec3(0.f, 0.f, 1.f);
 			vert.tan = Vec3(1.f, 0.f, 0.f);
-			vert.tex = Vec2(1.f, 0.f);
+			vert.tex = Vec2(1.f, 0.f) * uvmultiplier;
 			result.vertices.push_back(vert);
 		}
 		{
@@ -119,7 +119,7 @@ namespace NPGeoHelper
 			vert.norm = Vec3(0.f, 1.f, 0.f);
 			vert.binorm = Vec3(0.f, 0.f, 1.f);
 			vert.tan = Vec3(1.f, 0.f, 0.f);
-			vert.tex = Vec2(1.f, 1.f);
+			vert.tex = Vec2(1.f, 1.f) * uvmultiplier;
 			result.vertices.push_back(vert);
 		}
 		{
@@ -128,7 +128,7 @@ namespace NPGeoHelper
 			vert.norm = Vec3(0.f, 1.f, 0.f);
 			vert.binorm = Vec3(0.f, 0.f, 1.f);
 			vert.tan = Vec3(1.f, 0.f, 0.f);
-			vert.tex = Vec2(0.f, 1.f);
+			vert.tex = Vec2(0.f, 1.f) * uvmultiplier;
 			result.vertices.push_back(vert);
 		}
 		result.indices.push_back(0);

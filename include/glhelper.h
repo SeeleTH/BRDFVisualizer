@@ -62,7 +62,7 @@ namespace NPGLHelper
 		RenderObject();
 		~RenderObject();
 
-		void SetGeometry(const NPGeoHelper::Geometry& geo);
+		void SetGeometry(const NPGeoHelper::Geometry& geo, unsigned int type = 0);
 		void ClearGeometry();
 		GLuint GetVAO() { return m_iVAO; }
 		GLsizei GetIndicesSize() { return m_iIndicesSize; }

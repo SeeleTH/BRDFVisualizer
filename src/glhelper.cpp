@@ -94,6 +94,7 @@ namespace NPGLHelper
 		unsigned char* image = SOIL_load_image(path, &width, &height, 0, SOIL_LOAD_RGB);
 		if (!image)
 		{
+			DEBUG_COUT(SOIL_last_result());
 			return false;
 		}
 
@@ -155,44 +156,96 @@ namespace NPGLHelper
 
 	}
 
-	void RenderObject::SetGeometry(const NPGeoHelper::Geometry& geo)
+	void RenderObject::SetGeometry(const NPGeoHelper::Geometry& geo, unsigned int type)
 	{
-		std::vector<GLfloat> vertices;
-		for (auto it = geo.vertices.begin(); it != geo.vertices.end(); it++)
+		if (type == 0)
 		{
-			vertices.push_back(it->pos._x);
-			vertices.push_back(it->pos._y);
-			vertices.push_back(it->pos._z);
-			vertices.push_back(it->tex._x);
-			vertices.push_back(it->tex._y);
-		}
+			std::vector<GLfloat> vertices;
+			for (auto it = geo.vertices.begin(); it != geo.vertices.end(); it++)
+			{
+				vertices.push_back(it->pos._x);
+				vertices.push_back(it->pos._y);
+				vertices.push_back(it->pos._z);
+				vertices.push_back(it->tex._x);
+				vertices.push_back(it->tex._y);
+			}
 
-		m_iIndicesSize = geo.indices.size();
-		std::vector<GLuint> indices;
-		for (auto it = geo.indices.begin(); it != geo.indices.end(); it++)
+			m_iIndicesSize = geo.indices.size();
+			std::vector<GLuint> indices;
+			for (auto it = geo.indices.begin(); it != geo.indices.end(); it++)
+			{
+				indices.push_back(*it);
+			}
+
+
+			if (m_iVAO >= 0)
+			{
+				ClearGeometry();
+			}
+
+			glGenBuffers(1, &m_iVBO);
+			glGenBuffers(1, &m_iEBO);
+			glGenVertexArrays(1, &m_iVAO);
+			glBindVertexArray(m_iVAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_iVBO);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_iEBO);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * indices.size(), indices.data(), GL_STATIC_DRAW);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+			glEnableVertexAttribArray(0);
+			glEnableVertexAttribArray(1);
+			glBindVertexArray(0);
+		}
+		else if (type == 1)
 		{
-			indices.push_back(*it);
+			std::vector<GLfloat> vertices;
+			for (auto it = geo.vertices.begin(); it != geo.vertices.end(); it++)
+			{
+				vertices.push_back(it->pos._x);
+				vertices.push_back(it->pos._y);
+				vertices.push_back(it->pos._z);
+				vertices.push_back(it->norm._x);
+				vertices.push_back(it->norm._y);
+				vertices.push_back(it->norm._z);
+				vertices.push_back(it->tan._x);
+				vertices.push_back(it->tan._y);
+				vertices.push_back(it->tan._z);
+				vertices.push_back(it->tex._x);
+				vertices.push_back(it->tex._y);
+			}
+
+			m_iIndicesSize = geo.indices.size();
+			std::vector<GLuint> indices;
+			for (auto it = geo.indices.begin(); it != geo.indices.end(); it++)
+			{
+				indices.push_back(*it);
+			}
+
+
+			if (m_iVAO >= 0)
+			{
+				ClearGeometry();
+			}
+
+			glGenBuffers(1, &m_iVBO);
+			glGenBuffers(1, &m_iEBO);
+			glGenVertexArrays(1, &m_iVAO);
+			glBindVertexArray(m_iVAO);
+			glBindBuffer(GL_ARRAY_BUFFER, m_iVBO);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_iEBO);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * indices.size(), indices.data(), GL_STATIC_DRAW);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)0);
+			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
+			glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(6 * sizeof(GLfloat)));
+			glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 11 * sizeof(GLfloat), (GLvoid*)(9 * sizeof(GLfloat)));
+			glEnableVertexAttribArray(0);
+			glEnableVertexAttribArray(1);
+			glEnableVertexAttribArray(2);
+			glEnableVertexAttribArray(3);
+			glBindVertexArray(0);
 		}
-
-
-		if (m_iVAO >= 0)
-		{
-			ClearGeometry();
-		}
-
-		glGenBuffers(1, &m_iVBO);
-		glGenBuffers(1, &m_iEBO);
-		glGenVertexArrays(1, &m_iVAO);
-		glBindVertexArray(m_iVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, m_iVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_iEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * indices.size(), indices.data(), GL_STATIC_DRAW);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLvoid*)(3 * sizeof(GLfloat)));
-		glEnableVertexAttribArray(0);
-		glEnableVertexAttribArray(1);
-		glBindVertexArray(0);
 	}
 
 	void RenderObject::ClearGeometry()

@@ -5,6 +5,7 @@
 in vec2 outTexCoord;
 in vec3 outNormal;
 in vec4 outTangent;
+in vec3 outPosW;
 
 out vec4 color;
 
@@ -16,7 +17,7 @@ uniform float env_multiplier;
 uniform int n_th;
 uniform int n_ph;
 uniform int init_samp;
-uniform vec3 viewDir;
+uniform vec3 viewPos;
 
 uniform samplerCube envmap;
 
@@ -104,6 +105,7 @@ void main()
 	vec3 bitangent = normalize(cross(tangent, normal));
 	mat3 ttnb = mat3(tangent, normal, bitangent);
 	mat3 tnb = transpose(ttnb);
+	vec3 viewDir = normalize(outPosW - viewPos);
 
 	vec4 result = vec4(0.f, 0.f, 0.f, 0.f);
 	vec3 viewDirL = tnb * viewDir;

@@ -4,6 +4,7 @@
 in vec2 outTexCoord;
 in vec3 outNormal;
 in vec4 outTangent;
+in vec3 outPosW;
 
 out vec4 color;
 
@@ -15,7 +16,7 @@ uniform int n_th;
 uniform int n_ph;
 uniform vec3 lightDir;
 uniform vec3 lightColor;
-uniform vec3 viewDir;
+uniform vec3 viewPos;
 
 void GetVectorIndex(vec3 value, out float th, out float ph)
 {
@@ -100,6 +101,7 @@ void main()
 	vec3 tangent = normalize(outTangent.xyz - dot(normal, outTangent.xyz) * normal);
 	vec3 bitangent = normalize(cross(tangent, normal));
 	mat3 tbn = transpose(mat3(tangent, normal, bitangent));
+	vec3 viewDir = normalize(outPosW - viewPos);
 
 	vec3 lightDirL = tbn * lightDir;
 	vec3 viewDirL = tbn * viewDir;
