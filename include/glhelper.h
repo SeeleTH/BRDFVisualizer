@@ -90,6 +90,7 @@ namespace NPGLHelper
 		void SetInt(const char* var, const int value);
 		void SetFloat(const char* var, const float value);
 		void SetVec3(const char* var, const float x, const float y, const float z);
+		void SetVec3(const char* var, const NPMathHelper::Vec3 &value);
 
 		inline const bool GetIsLinked() { return m_bIsLinked; }
 

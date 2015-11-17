@@ -109,5 +109,32 @@
     <None Include="..\shader\BRDFEnvModelPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="..\shader\DiffuseEnvModelVS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\DiffuseModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\DiffuseModelVS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\BlinnPhoneEnvModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\BlinnPhongEnvModelVS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\BlinnPhongModelVS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\DiffuseEnvModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\BlinnPhongNormalModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\BlinnPhongModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

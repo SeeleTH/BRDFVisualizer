@@ -244,7 +244,6 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_fZoomMin(0.25f)
 	, m_fZoomMax(20.0f)
 	, m_fZoomSen(0.1f)
-	, m_pBRDFModelEffect(nullptr)
 	, m_bIsLoadTexture(false)
 	, m_sBRDFTextureName("None")
 	, m_bIsLoadModel(false)
@@ -268,9 +267,16 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_uiHDRCB(0)
 	, m_uiHDRDB(0)
 	, m_pFinalComposeEffect(nullptr)
+	, m_pDiffuseModelEffect(nullptr)
+	, m_pBlinnPhongModelEffect(nullptr)
+	, m_pBlinnPhongNormalModelEffect(nullptr)
+	, m_pBRDFModelEffect(nullptr)
+	, m_pDiffuseEnvModelEffect(nullptr)
+	, m_pBlinnPhongEnvModelEffect(nullptr)
 	, m_pBRDFEnvModelEffect(nullptr)
 	, m_fExposure(1.f)
 	, m_fEnvMapMultiplier(1.f)
+	, m_bIsShowFloor(true)
 {
 }
 
@@ -293,22 +299,9 @@ int ModelViewWindow::OnInit()
 	ATB_ASSERT(TwAddVarRO(mainBar, "brdfname", TW_TYPE_STDSTRING, &m_sBRDFTextureName,
 		" label='Loaded BRDF' help='Loaded BRDF' group='BRDF File'"));
 
-	ATB_ASSERT(TwAddButton(mainBar, "openmodel", BrowseModelButton, this, "label='Browse File' group='Model File'"));
+	ATB_ASSERT(TwAddButton(mainBar, "openmodel", BrowseModelButton, this, "label='Browse File' group='Model'"));
 	ATB_ASSERT(TwAddVarRO(mainBar, "modelname", TW_TYPE_STDSTRING, &m_sModelName,
-		" label='Loaded Model' help='Loaded Model' group='Model File'"));
-
-	ATB_ASSERT(TwAddVarRW(mainBar, "wireframe", TW_TYPE_BOOLCPP, &m_bIsWireFrame,
-		" label='Wireframe' help='Show Wireframe' group='Display'"));
-	ATB_ASSERT(TwAddVarRW(mainBar, "scenegui", TW_TYPE_BOOLCPP, &m_bIsSceneGUI,
-		" label='Scene GUI' help='Show Scene GUI' group='Display'"));
-	ATB_ASSERT(TwAddVarRW(mainBar, "Exposure", TW_TYPE_FLOAT, &m_fExposure,
-		" label='Exposure' help='View Exposure' group='Display' step=0.1"));
-	
-	TwEnumVal renderEV[] = { { RENDERINGMETHOD_BRDFDIRLIGHT, "BRDF DirLight" }, 
-	{ RENDERINGMETHOD_BRDFENVMAP, "BRDF EnvMap" },
-	{ RENDERINGMETHOD_BLINNPHONGDIRLIGHT, "Blinn-Phong DirLight" } };
-	TwType renderType = TwDefineEnum("Rendering Method", renderEV, RENDERINGMETHOD_N);
-	TwAddVarCB(mainBar, "Rendering", renderType, SetRenderingMethodCallback, GetRenderingMethodCallback, this, " label='Rendering Method' help='Set Rendering Method' group='Display'");
+		" label='Loaded Model' help='Loaded Model' group='Model'"));
 
 	ATB_ASSERT(TwAddVarRW(mainBar, "PosX", TW_TYPE_FLOAT, &m_v3ModelPos._x,
 		" label='Pos X' help='Model Translation' group='Model'"));
@@ -321,10 +314,39 @@ int ModelViewWindow::OnInit()
 	ATB_ASSERT(TwAddVarRW(mainBar, "Scale", TW_TYPE_FLOAT, &m_fModelScale,
 		" label='Scale' help='Model Scale' group='Model' step=0.1"));
 
+	ATB_ASSERT(TwAddVarRW(mainBar, "wireframe", TW_TYPE_BOOLCPP, &m_bIsWireFrame,
+		" label='Wireframe' help='Show Wireframe' group='Display'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "scenegui", TW_TYPE_BOOLCPP, &m_bIsSceneGUI,
+		" label='Scene GUI' help='Show Scene GUI' group='Display'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Exposure", TW_TYPE_FLOAT, &m_fExposure,
+		" label='Exposure' help='View Exposure' group='Display' step=0.1"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Show Floor", TW_TYPE_BOOLCPP, &m_bIsShowFloor,
+		" label='Show Floor' help='Show Floor' group='Display'"));
+	
+	TwEnumVal renderEV[] = { 
+		{ RENDERINGMETHOD_DIFFUSEDIRLIGHT, "Diffuse DirLight" },
+		{ RENDERINGMETHOD_BLINNPHONGDIRLIGHT, "Blinn-Phong DirLight" },
+		{ RENDERINGMETHOD_BRDFDIRLIGHT, "BRDF DirLight" },
+		{ RENDERINGMETHOD_DIFFUSEENVMAP, "Diffuse EnvMap" },
+		{ RENDERINGMETHOD_BLINNPHONGENVMAP, "Blinn-Phong EnvMap" },
+		{ RENDERINGMETHOD_BRDFENVMAP, "BRDF EnvMap" }
+	};
+	TwType renderType = TwDefineEnum("Rendering Method", renderEV, RENDERINGMETHOD_N);
+	TwAddVarCB(mainBar, "Rendering", renderType, SetRenderingMethodCallback, GetRenderingMethodCallback, this, " label='Rendering Method' help='Set Rendering Method' group='Display'");
+
+	ATB_ASSERT(TwAddVarRW(mainBar, "Light Ambient Color", TW_TYPE_COLOR3F, &m_dirLight.ambient, " group='Directional Light' "));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Light Diffuse Color", TW_TYPE_COLOR3F, &m_dirLight.diffuse, " group='Directional Light' "));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Light Specular Color", TW_TYPE_COLOR3F, &m_dirLight.specular, " group='Directional Light' "));
 	ATB_ASSERT(TwAddVarRW(mainBar, "Color", TW_TYPE_COLOR3F, &m_v3LightColor, " group='Directional Light' "));
 	ATB_ASSERT(TwAddVarRW(mainBar, "Intensity Multiplier", TW_TYPE_FLOAT, &m_fLightIntMultiplier,
 		" label='Intensity Multiplier' help='Multiply light color' group='Directional Light' step=0.1"));
 	//ATB_ASSERT(TwAddVarRW(mainBar, "Direction", TW_TYPE_DIR3F, &m_f3LightDir, " group='Directional Light' "));
+
+	ATB_ASSERT(TwAddVarRW(mainBar, "Model Ambient Color", TW_TYPE_COLOR3F, &m_modelBlinnPhongMaterial.ambient, " group='Material' "));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Model Diffuse Color", TW_TYPE_COLOR3F, &m_modelBlinnPhongMaterial.diffuse, " group='Material' "));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Model Specular Color", TW_TYPE_COLOR3F, &m_modelBlinnPhongMaterial.specular, " group='Material' "));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Model Shininess", TW_TYPE_FLOAT, &m_modelBlinnPhongMaterial.shininess,
+		"group='Material' step=0.1"));
 
 	std::string facename[] = {"Right", "Left", "Top", "Bottom", "Back", "Front"};
 	for (unsigned int i = 0; i < 6; i++)
@@ -360,6 +382,33 @@ int ModelViewWindow::OnInit()
 	m_AxisLine[2].Init(m_pShareContent);
 	m_InLine.Init(m_pShareContent);
 	CHECK_GL_ERROR;
+	m_pDiffuseModelEffect = m_pShareContent->GetEffect("DiffuseModelEffect");
+	if (!m_pDiffuseModelEffect->GetIsLinked())
+	{
+		m_pDiffuseModelEffect->initEffect();
+		m_pDiffuseModelEffect->attachShaderFromFile("..\\shader\\DiffuseModelVS.glsl", GL_VERTEX_SHADER);
+		m_pDiffuseModelEffect->attachShaderFromFile("..\\shader\\DiffuseModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pDiffuseModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
+	m_pBlinnPhongModelEffect = m_pShareContent->GetEffect("BlinnPhongModelEffect");
+	if (!m_pBlinnPhongModelEffect->GetIsLinked())
+	{
+		m_pBlinnPhongModelEffect->initEffect();
+		m_pBlinnPhongModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBlinnPhongModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pBlinnPhongModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
+	m_pBlinnPhongNormalModelEffect = m_pShareContent->GetEffect("BlinnPhongNormalModelEffect");
+	if (!m_pBlinnPhongNormalModelEffect->GetIsLinked())
+	{
+		m_pBlinnPhongNormalModelEffect->initEffect();
+		m_pBlinnPhongNormalModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBlinnPhongNormalModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongNormalModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pBlinnPhongNormalModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
 	m_pBRDFModelEffect = m_pShareContent->GetEffect("BRDFModelEffect");
 	if (!m_pBRDFModelEffect->GetIsLinked())
 	{
@@ -367,6 +416,24 @@ int ModelViewWindow::OnInit()
 		m_pBRDFModelEffect->attachShaderFromFile("..\\shader\\BRDFModelVS.glsl", GL_VERTEX_SHADER);
 		m_pBRDFModelEffect->attachShaderFromFile("..\\shader\\BRDFModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pBRDFModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
+	m_pDiffuseEnvModelEffect = m_pShareContent->GetEffect("DiffuseEnvModelEffect");
+	if (!m_pDiffuseEnvModelEffect->GetIsLinked())
+	{
+		m_pDiffuseEnvModelEffect->initEffect();
+		m_pDiffuseEnvModelEffect->attachShaderFromFile("..\\shader\\DiffuseEnvModelVS.glsl", GL_VERTEX_SHADER);
+		m_pDiffuseEnvModelEffect->attachShaderFromFile("..\\shader\\DiffuseEnvModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pDiffuseEnvModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
+	m_pBlinnPhongEnvModelEffect = m_pShareContent->GetEffect("BlinnPhongEnvModelEffect");
+	if (!m_pBlinnPhongEnvModelEffect->GetIsLinked())
+	{
+		m_pBlinnPhongEnvModelEffect->initEffect();
+		m_pBlinnPhongEnvModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongEnvModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBlinnPhongEnvModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongEnvModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pBlinnPhongEnvModelEffect->linkEffect();
 	}
 	CHECK_GL_ERROR;
 	m_pBRDFEnvModelEffect = m_pShareContent->GetEffect("BRDFEnvModelEffect");
@@ -465,14 +532,23 @@ int ModelViewWindow::OnTick(const float deltaTime)
 	glBindFramebuffer(GL_FRAMEBUFFER, m_uiHDRFBO);
 	switch (m_eRenderingMethod)
 	{
-	case RENDERINGMETHOD_BRDFDIRLIGHT:
-		RenderMethod_BRDFDirLight();
-		break;
-	case RENDERINGMETHOD_BRDFENVMAP:
-		RenderMethod_BRDFEnvMap();
+	case RENDERINGMETHOD_DIFFUSEDIRLIGHT:
+		RenderMethod_DiffuseDirLight();
 		break;
 	case RENDERINGMETHOD_BLINNPHONGDIRLIGHT:
 		RenderMethod_BlinnPhongDirLight();
+		break;
+	case RENDERINGMETHOD_BRDFDIRLIGHT:
+		RenderMethod_BRDFDirLight();
+		break;
+	case RENDERINGMETHOD_DIFFUSEENVMAP:
+		RenderMethod_DiffuseEnvMap();
+		break;
+	case RENDERINGMETHOD_BLINNPHONGENVMAP:
+		RenderMethod_BlinnPhongEnvMap();
+		break;
+	case RENDERINGMETHOD_BRDFENVMAP:
+		RenderMethod_BRDFEnvMap();
 		break;
 	}
 
@@ -623,14 +699,23 @@ void ModelViewWindow::SetRenderingMethod(RENDERINGMETHODS method)
 {
 	switch (m_eRenderingMethod)
 	{
-	case RENDERINGMETHOD_BRDFDIRLIGHT:
-		RenderMethod_BRDFDirLightQuit();
-		break;
-	case RENDERINGMETHOD_BRDFENVMAP:
-		RenderMethod_BRDFEnvMapQuit();
+	case RENDERINGMETHOD_DIFFUSEDIRLIGHT:
+		RenderMethod_DiffuseDirLightQuit();
 		break;
 	case RENDERINGMETHOD_BLINNPHONGDIRLIGHT:
 		RenderMethod_BlinnPhongDirLightQuit();
+		break;
+	case RENDERINGMETHOD_BRDFDIRLIGHT:
+		RenderMethod_BRDFDirLightQuit();
+		break;
+	case RENDERINGMETHOD_DIFFUSEENVMAP:
+		RenderMethod_DiffuseEnvMapQuit();
+		break;
+	case RENDERINGMETHOD_BLINNPHONGENVMAP:
+		RenderMethod_BlinnPhongEnvMapQuit();
+		break;
+	case RENDERINGMETHOD_BRDFENVMAP:
+		RenderMethod_BRDFEnvMapQuit();
 		break;
 	}
 
@@ -638,14 +723,23 @@ void ModelViewWindow::SetRenderingMethod(RENDERINGMETHODS method)
 
 	switch (m_eRenderingMethod)
 	{
-	case RENDERINGMETHOD_BRDFDIRLIGHT:
-		RenderMethod_BRDFDirLightInit();
-		break;
-	case RENDERINGMETHOD_BRDFENVMAP:
-		RenderMethod_BRDFEnvMapInit();
+	case RENDERINGMETHOD_DIFFUSEDIRLIGHT:
+		RenderMethod_DiffuseDirLightInit();
 		break;
 	case RENDERINGMETHOD_BLINNPHONGDIRLIGHT:
 		RenderMethod_BlinnPhongDirLightInit();
+		break;
+	case RENDERINGMETHOD_BRDFDIRLIGHT:
+		RenderMethod_BRDFDirLightInit();
+		break;
+	case RENDERINGMETHOD_DIFFUSEENVMAP:
+		RenderMethod_DiffuseEnvMapInit();
+		break;
+	case RENDERINGMETHOD_BLINNPHONGENVMAP:
+		RenderMethod_BlinnPhongEnvMapInit();
+		break;
+	case RENDERINGMETHOD_BRDFENVMAP:
+		RenderMethod_BRDFEnvMapInit();
 		break;
 	}
 }
@@ -683,6 +777,70 @@ void ModelViewWindow::UpdateBRDFData()
 	}
 }
 
+void ModelViewWindow::RenderMethod_DiffuseDirLight()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BlinnPhongDirLight()
+{
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	if (m_bIsWireFrame)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	else
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	UpdateBRDFData();
+	if (/*m_bIsLoadTexture &&*/ m_pModel)
+	{
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+			, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+			, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+		m_pBlinnPhongModelEffect->activeEffect();
+		m_pBlinnPhongModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pBlinnPhongModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		m_pBlinnPhongModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pBlinnPhongModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+
+		m_dirLight.dir._y = -sin(m_fInYaw);
+		m_dirLight.dir._x = -cos(m_fInYaw) * sin(m_fInPitch);
+		m_dirLight.dir._z = -cos(m_fInYaw) * cos(m_fInPitch);
+
+		m_pBlinnPhongModelEffect->SetVec3("material.ambient", m_modelBlinnPhongMaterial.ambient);
+		m_pBlinnPhongModelEffect->SetVec3("material.diffuse", m_modelBlinnPhongMaterial.diffuse);
+		m_pBlinnPhongModelEffect->SetVec3("material.specular", m_modelBlinnPhongMaterial.specular);
+		m_pBlinnPhongModelEffect->SetFloat("material.shininess", m_modelBlinnPhongMaterial.shininess);
+
+		m_pBlinnPhongModelEffect->SetVec3("light.ambient", m_dirLight.ambient * m_fLightIntMultiplier);
+		m_pBlinnPhongModelEffect->SetVec3("light.diffuse", m_dirLight.diffuse * m_fLightIntMultiplier);
+		m_pBlinnPhongModelEffect->SetVec3("light.specular", m_dirLight.specular * m_fLightIntMultiplier);
+		m_pBlinnPhongModelEffect->SetVec3("light.dir", m_dirLight.dir);
+
+		glm::vec3 camDir = m_Cam.GetDir();
+		m_pBlinnPhongModelEffect->SetVec3("viewDir", camDir.x, camDir.y, camDir.z);
+
+		m_pModel->Draw(*m_pBlinnPhongModelEffect);
+
+		// Draw Floor Plane
+		//NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
+		//NPMathHelper::Mat4x4 floorTranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
+		//m_pBlinnPhongModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor());
+		//m_pBlinnPhongModelEffect->SetMatrix("tranInvModel", floorTranInvModelMat.GetDataColumnMajor());
+		//glBindVertexArray(m_floor.GetVAO());
+		//glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0);
+		//glBindVertexArray(0);
+
+		m_pBlinnPhongModelEffect->deactiveEffect();
+	}
+
+	if (m_bIsWireFrame)
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+}
 
 void ModelViewWindow::RenderMethod_BRDFDirLight()
 {
@@ -730,13 +888,13 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 		m_pModel->Draw(*m_pBRDFModelEffect);
 
 		// Draw Floor Plane
-		NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
-		NPMathHelper::Mat4x4 floorTranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
-		m_pBRDFModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor());
-		m_pBRDFModelEffect->SetMatrix("tranInvModel", floorTranInvModelMat.GetDataColumnMajor());
-		glBindVertexArray(m_floor.GetVAO());
-		glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0);
-		glBindVertexArray(0);
+		//NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
+		//NPMathHelper::Mat4x4 floorTranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
+		//m_pBRDFModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor());
+		//m_pBRDFModelEffect->SetMatrix("tranInvModel", floorTranInvModelMat.GetDataColumnMajor());
+		//glBindVertexArray(m_floor.GetVAO());
+		//glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0);
+		//glBindVertexArray(0);
 
 		m_pBRDFModelEffect->deactiveEffect();
 	}
@@ -745,6 +903,16 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 	{
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
+}
+
+void ModelViewWindow::RenderMethod_DiffuseEnvMap()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BlinnPhongEnvMap()
+{
+
 }
 
 void ModelViewWindow::RenderMethod_BRDFEnvMap()
@@ -853,17 +1021,8 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 	}
 }
 
-void ModelViewWindow::RenderMethod_BlinnPhongDirLight()
-{
 
-}
-
-void ModelViewWindow::RenderMethod_BRDFDirLightInit()
-{
-
-}
-
-void ModelViewWindow::RenderMethod_BRDFEnvMapInit()
+void ModelViewWindow::RenderMethod_DiffuseDirLightInit()
 {
 
 }
@@ -873,17 +1032,59 @@ void ModelViewWindow::RenderMethod_BlinnPhongDirLightInit()
 
 }
 
-void ModelViewWindow::RenderMethod_BRDFDirLightQuit()
+void ModelViewWindow::RenderMethod_BRDFDirLightInit()
 {
 
 }
 
-void ModelViewWindow::RenderMethod_BRDFEnvMapQuit()
+void ModelViewWindow::RenderMethod_DiffuseEnvMapInit()
+{
+	m_uiEnvInitSamp = 0;
+	m_matLastCam = NPMathHelper::Mat4x4::Identity();
+	m_matLastModel = NPMathHelper::Mat4x4::Identity();
+}
+
+void ModelViewWindow::RenderMethod_BlinnPhongEnvMapInit()
+{
+	m_uiEnvInitSamp = 0;
+	m_matLastCam = NPMathHelper::Mat4x4::Identity();
+	m_matLastModel = NPMathHelper::Mat4x4::Identity();
+}
+
+void ModelViewWindow::RenderMethod_BRDFEnvMapInit()
+{
+	m_uiEnvInitSamp = 0;
+	m_matLastCam = NPMathHelper::Mat4x4::Identity();
+	m_matLastModel = NPMathHelper::Mat4x4::Identity();
+}
+
+
+void ModelViewWindow::RenderMethod_DiffuseDirLightQuit()
 {
 
 }
 
 void ModelViewWindow::RenderMethod_BlinnPhongDirLightQuit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BRDFDirLightQuit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_DiffuseEnvMapQuit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BlinnPhongEnvMapQuit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BRDFEnvMapQuit()
 {
 
 }

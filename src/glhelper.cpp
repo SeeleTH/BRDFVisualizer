@@ -324,6 +324,13 @@ namespace NPGLHelper
 		glUniform3f(valueLoc, x, y, z);
 	}
 
+	void Effect::SetVec3(const char* var, const NPMathHelper::Vec3 &value)
+	{
+		assert(m_iProgram >= 0);
+		GLuint valueLoc = glGetUniformLocation(m_iProgram, var);
+		glUniform3f(valueLoc, value._x, value._y, value._z);
+	}
+
 	Window::Window(const char* name, const int sizeW, const int sizeH)
 		: m_sName(name)
 		, m_iSizeW(sizeW)

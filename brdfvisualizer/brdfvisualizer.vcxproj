@@ -153,6 +153,11 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
     <ClInclude Include="meshhelper.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\shader\BlinnPhoneEnvModelPS.glsl" />
+    <None Include="..\shader\BlinnPhongModelPS.glsl" />
+    <None Include="..\shader\BlinnPhongNormalModelPS.glsl" />
+    <None Include="..\shader\BlinnPhongEnvModelVS.glsl" />
+    <None Include="..\shader\BlinnPhongModelVS.glsl" />
     <None Include="..\shader\BRDFEnvModelPS.glsl" />
     <None Include="..\shader\BRDFEnvModelVS.glsl" />
     <None Include="..\shader\BRDFModelPS.glsl" />
@@ -161,6 +166,10 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
     <None Include="..\shader\debugLineVS.glsl" />
     <None Include="..\shader\BRDFVisualizePS.glsl" />
     <None Include="..\shader\BRDFVisualizeVS.glsl" />
+    <None Include="..\shader\DiffuseEnvModelPS.glsl" />
+    <None Include="..\shader\DiffuseEnvModelVS.glsl" />
+    <None Include="..\shader\DiffuseModelPS.glsl" />
+    <None Include="..\shader\DiffuseModelVS.glsl" />
     <None Include="..\shader\FinalComposePS.glsl" />
     <None Include="..\shader\FinalComposeVS.glsl" />
     <None Include="..\shader\SkyboxPS.glsl" />

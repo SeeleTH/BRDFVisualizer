@@ -161,9 +161,12 @@ public:
 
 	enum RENDERINGMETHODS
 	{
-		RENDERINGMETHOD_BRDFDIRLIGHT,
-		RENDERINGMETHOD_BRDFENVMAP,
+		RENDERINGMETHOD_DIFFUSEDIRLIGHT,
 		RENDERINGMETHOD_BLINNPHONGDIRLIGHT,
+		RENDERINGMETHOD_BRDFDIRLIGHT,
+		RENDERINGMETHOD_DIFFUSEENVMAP,
+		RENDERINGMETHOD_BLINNPHONGENVMAP,
+		RENDERINGMETHOD_BRDFENVMAP,
 		RENDERINGMETHOD_N,
 		RENDERINGMETHOD_NONE,
 	};
@@ -176,17 +179,26 @@ protected:
 	// Rendering methods
 	RENDERINGMETHODS m_eRenderingMethod;
 
-	void RenderMethod_BRDFDirLight();
-	void RenderMethod_BRDFEnvMap();
+	void RenderMethod_DiffuseDirLight();
 	void RenderMethod_BlinnPhongDirLight();
+	void RenderMethod_BRDFDirLight();
+	void RenderMethod_DiffuseEnvMap();
+	void RenderMethod_BlinnPhongEnvMap();
+	void RenderMethod_BRDFEnvMap();
 
-	void RenderMethod_BRDFDirLightInit();
-	void RenderMethod_BRDFEnvMapInit();
+	void RenderMethod_DiffuseDirLightInit();
 	void RenderMethod_BlinnPhongDirLightInit();
+	void RenderMethod_BRDFDirLightInit();
+	void RenderMethod_DiffuseEnvMapInit();
+	void RenderMethod_BlinnPhongEnvMapInit();
+	void RenderMethod_BRDFEnvMapInit();
 
-	void RenderMethod_BRDFDirLightQuit();
-	void RenderMethod_BRDFEnvMapQuit();
+	void RenderMethod_DiffuseDirLightQuit();
 	void RenderMethod_BlinnPhongDirLightQuit();
+	void RenderMethod_BRDFDirLightQuit();
+	void RenderMethod_DiffuseEnvMapQuit();
+	void RenderMethod_BlinnPhongEnvMapQuit();
+	void RenderMethod_BRDFEnvMapQuit();
 
 	// Render Quad
 	void RenderScreenQuad();
@@ -201,7 +213,11 @@ protected:
 	float m_fExposure;
 	NPCamHelper::RotateCamera m_Cam;
 
+	NPGLHelper::Effect* m_pDiffuseModelEffect;
+	NPGLHelper::Effect* m_pBlinnPhongModelEffect;
 	NPGLHelper::Effect* m_pBRDFModelEffect;
+	NPGLHelper::Effect* m_pDiffuseEnvModelEffect;
+	NPGLHelper::Effect* m_pBlinnPhongEnvModelEffect;
 	NPGLHelper::Effect* m_pBRDFEnvModelEffect;
 	unsigned int m_uiEnvInitSamp;
 	NPMathHelper::Mat4x4 m_matLastCam;
@@ -217,10 +233,30 @@ protected:
 	GLuint m_iBRDFEstTex;
 	std::string m_sBRDFTextureName;
 
+	struct Material {
+		NPMathHelper::Vec3 ambient;
+		NPMathHelper::Vec3 diffuse;
+		NPMathHelper::Vec3 specular;
+		float shininess;
+		Material() : shininess(0.5f), ambient(0.1, 0.1f, 0.1f)
+			, diffuse(0.3f, 0.3f, 0.3f), specular(0.3f, 0.3f, 0.3) {}
+	};
+
+	struct DirLight {
+		NPMathHelper::Vec3 dir;
+		NPMathHelper::Vec3 ambient;
+		NPMathHelper::Vec3 diffuse;
+		NPMathHelper::Vec3 specular;
+		DirLight() : dir(0.f, 1.f, 0.f), ambient(0.1, 0.1f, 0.1f)
+			, diffuse(0.3f, 0.3f, 0.3f), specular(0.3f, 0.3f, 0.3) {}
+
+	};
+
 	// Model
 	bool m_bIsLoadModel;
 	BRDFModel::Model* m_pModel;
 	std::string m_sModelName;
+	Material m_modelBlinnPhongMaterial;
 
 	// Display Options
 	bool m_bIsWireFrame;
@@ -229,6 +265,7 @@ protected:
 	NPGLHelper::DebugLine m_AxisLine[3];
 
 	// Light
+	DirLight m_dirLight;
 	glm::vec3 m_v3LightColor;
 	float m_fLightIntMultiplier;
 	float m_fInSenX, m_fInSenY;
@@ -259,9 +296,15 @@ protected:
 	int m_iScrollingTemp;
 
 	//Other object
+	//Sky
 	NPGLHelper::Effect* m_pSkyboxEffect;
 	NPGLHelper::RenderObject m_skybox;
+
+	//Floor
+	bool m_bIsShowFloor;
+	NPGLHelper::Effect* m_pBlinnPhongNormalModelEffect;
 	NPGLHelper::RenderObject m_floor;
+	GLuint m_iFloorTex;
 };
 
 #endif
