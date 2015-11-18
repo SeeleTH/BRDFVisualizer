@@ -49,14 +49,14 @@ vec3 hemisphereSample_uniform(float u, float v) {
 	float phi = v * 2.0 * M_PI;
 	float cosTheta = 1.0 - u;
 	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-	return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+	return vec3(cos(phi) * sinTheta, cosTheta, sin(phi) * sinTheta);
 }
 
 vec3 hemisphereSample_cos(float u, float v) {
 	float phi = v * 2.0 * M_PI;
 	float cosTheta = sqrt(1.0 - u);
 	float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-	return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+	return vec3(cos(phi) * sinTheta, cosTheta, sin(phi) * sinTheta);
 }
 
 // ================
@@ -69,16 +69,16 @@ void main()
 	vec3 tangent = normalize(outTangent.xyz - dot(normal, outTangent.xyz) * normal);
 	//tangent = normalize(cross(vec3(0.f, 1.f, 0.f), normal));
 	vec3 bitangent = normalize(cross(tangent, normal));
-	mat3 ttnb = mat3(tangent, normal, bitangent);
-	mat3 tnb = transpose(ttnb);
+	mat3 tnb = mat3(tangent, normal, bitangent);
+	mat3 ttnb = transpose(tnb);
 	vec3 viewDir = normalize(outPosW - viewPos);
 
 	vec3 normalW = normalize(outNormal);
 	vec4 diffTex = texture(texture_diffuse1, outTexCoord);
 
 	vec2 sampHemiSpace = hammersley2d(uint(init_samp), uint(max_samp));
-	vec3 sampDir = hemisphereSample_cos(sampHemiSpace.x, sampHemiSpace.y);
-	vec3 sampDirW = ttnb * sampDir;
+	vec3 sampDir = normalize(hemisphereSample_cos(sampHemiSpace.x, sampHemiSpace.y));
+	vec3 sampDirW = tnb * sampDir;
 
 	vec3 lightColor = env_multiplier * texture(envmap, sampDirW).rgb;
 	float kEnergyConvervation = (8.0f + material.shininess) / (8.0 * M_PI);
