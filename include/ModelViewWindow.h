@@ -222,6 +222,7 @@ protected:
 	unsigned int m_uiEnvInitSamp;
 	NPMathHelper::Mat4x4 m_matLastCam;
 	NPMathHelper::Mat4x4 m_matLastModel;
+	float m_fRenderingProgress;
 
 	// BRDF
 	bool m_bIsBRDFUpdated;
@@ -232,6 +233,9 @@ protected:
 	bool m_bIsLoadTexture;
 	GLuint m_iBRDFEstTex;
 	std::string m_sBRDFTextureName;
+
+	// Blinn-phong
+	unsigned int m_uiMaxSampling;
 
 	struct Material {
 		NPMathHelper::Vec3 ambient;

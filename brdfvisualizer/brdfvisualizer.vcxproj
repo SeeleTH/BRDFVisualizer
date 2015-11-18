@@ -153,7 +153,7 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
     <ClInclude Include="meshhelper.h" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\shader\BlinnPhoneEnvModelPS.glsl" />
+    <None Include="..\shader\BlinnPhongEnvModelPS.glsl" />
     <None Include="..\shader\BlinnPhongModelPS.glsl" />
     <None Include="..\shader\BlinnPhongNormalModelPS.glsl" />
     <None Include="..\shader\BRDFEnvModelPS.glsl" />

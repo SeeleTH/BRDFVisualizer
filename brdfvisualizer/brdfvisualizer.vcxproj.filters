@@ -106,9 +106,6 @@
     <None Include="..\shader\DiffuseModelPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
-    <None Include="..\shader\BlinnPhoneEnvModelPS.glsl">
-      <Filter>Shader Files</Filter>
-    </None>
     <None Include="..\shader\DiffuseEnvModelPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
@@ -122,6 +119,9 @@
       <Filter>Shader Files</Filter>
     </None>
     <None Include="..\shader\DiffuseNormalModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\BlinnPhongEnvModelPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
   </ItemGroup>

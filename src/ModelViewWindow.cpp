@@ -280,6 +280,8 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_bIsShowFloor(true)
 	, m_iFloorTex(0)
 	, m_iFloorNormalTex(0)
+	, m_uiMaxSampling(1024)
+	, m_fRenderingProgress(0.f)
 {
 }
 
@@ -335,7 +337,11 @@ int ModelViewWindow::OnInit()
 		{ RENDERINGMETHOD_BRDFENVMAP, "BRDF EnvMap" }
 	};
 	TwType renderType = TwDefineEnum("Rendering Method", renderEV, RENDERINGMETHOD_N);
-	TwAddVarCB(mainBar, "Rendering", renderType, SetRenderingMethodCallback, GetRenderingMethodCallback, this, " label='Rendering Method' help='Set Rendering Method' group='Display'");
+	TwAddVarCB(mainBar, "Rendering", renderType, SetRenderingMethodCallback, GetRenderingMethodCallback, this
+		, " label='Rendering Method' help='Set Rendering Method' group='Display'");
+
+	ATB_ASSERT(TwAddVarRO(mainBar, "Rendering Progress", TW_TYPE_FLOAT, &m_fRenderingProgress,
+		"group='Display'"));
 
 	ATB_ASSERT(TwAddVarRW(mainBar, "Light Ambient Color", TW_TYPE_COLOR3F, &m_dirLight.ambient, " group='Directional Light' "));
 	ATB_ASSERT(TwAddVarRW(mainBar, "Light Diffuse Color", TW_TYPE_COLOR3F, &m_dirLight.diffuse, " group='Directional Light' "));
@@ -907,6 +913,7 @@ void ModelViewWindow::RenderMethod_DiffuseDirLight()
 
 void ModelViewWindow::RenderMethod_BlinnPhongDirLight()
 {
+	m_fRenderingProgress = 100.0f;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	if (m_bIsWireFrame)
@@ -1113,7 +1120,103 @@ void ModelViewWindow::RenderMethod_DiffuseEnvMap()
 
 void ModelViewWindow::RenderMethod_BlinnPhongEnvMap()
 {
+	if (NPMathHelper::Mat4x4(m_Cam.GetViewMatrix()) != m_matLastCam)
+	{
+		m_matLastCam = NPMathHelper::Mat4x4(m_Cam.GetViewMatrix());
+		m_uiEnvInitSamp = 0;
+	}
 
+	NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+		, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+		, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+
+	if (modelMat != m_matLastModel)
+	{
+		m_matLastModel = modelMat;
+		m_uiEnvInitSamp = 0;
+	}
+
+	if (m_uiEnvInitSamp + ITR_COUNT > m_uiMaxSampling)
+		return;
+
+	if (m_uiEnvInitSamp <= 0)
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	if (m_bIsWireFrame)
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	else
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	if (/*m_bIsLoadTexture &&*/ m_pModel)
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+		m_pBlinnPhongEnvModelEffect->activeEffect(); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor()); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvModelEffect->SetMatrix("view", m_Cam.GetViewMatrix()); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor()); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor()); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvModelEffect->SetInt("init_samp", m_uiEnvInitSamp); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvModelEffect->SetInt("max_samp", m_uiMaxSampling); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvModelEffect->SetFloat("env_multiplier", m_fEnvMapMultiplier); CHECK_GL_ERROR;
+
+		glm::vec3 lightDir;
+		lightDir.y = -sin(m_fInYaw);
+		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
+		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
+		m_pBlinnPhongEnvModelEffect->SetVec3("viewPos", m_Cam.GetPos()); CHECK_GL_ERROR;
+
+		m_pBlinnPhongEnvModelEffect->SetVec3("material.ambient", m_modelBlinnPhongMaterial.ambient); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvModelEffect->SetVec3("material.diffuse", m_modelBlinnPhongMaterial.diffuse); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvModelEffect->SetVec3("material.specular", m_modelBlinnPhongMaterial.specular); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvModelEffect->SetFloat("material.shininess", m_modelBlinnPhongMaterial.shininess); CHECK_GL_ERROR;
+
+		if (m_bIsEnvMapLoaded)
+		{
+			glActiveTexture(GL_TEXTURE4); CHECK_GL_ERROR;
+			glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap); CHECK_GL_ERROR;
+			m_pBlinnPhongEnvModelEffect->SetInt("envmap", 4); CHECK_GL_ERROR;
+		}
+
+		m_pModel->Draw(*m_pBlinnPhongEnvModelEffect); CHECK_GL_ERROR;
+		m_uiEnvInitSamp += ITR_COUNT;
+		m_fRenderingProgress = (float)m_uiEnvInitSamp / (float)m_uiMaxSampling * 100.f;
+
+		m_pBlinnPhongEnvModelEffect->deactiveEffect();
+
+		glDisable(GL_BLEND);
+	}
+
+	if (m_bIsEnvMapLoaded)
+	{
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		glCullFace(GL_FRONT);
+		NPMathHelper::Mat4x4 noTranCamMath = m_Cam.GetViewMatrix();
+		noTranCamMath._03 = noTranCamMath._13 = noTranCamMath._23 = 0.f;
+		m_pSkyboxEffect->activeEffect();
+		m_pSkyboxEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pSkyboxEffect->SetMatrix("view", noTranCamMath.GetDataColumnMajor());
+		m_pSkyboxEffect->SetMatrix("model", NPMathHelper::Mat4x4::scaleTransform(1.0f, 1.0f, 1.0f).GetDataColumnMajor());
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap);
+		m_pSkyboxEffect->SetInt("envmap", 0);
+
+		glBindVertexArray(m_skybox.GetVAO());
+		glDrawElements(GL_TRIANGLES, m_skybox.GetIndicesSize(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		m_pSkyboxEffect->deactiveEffect();
+		glCullFace(GL_BACK);
+	}
+
+	if (m_bIsWireFrame)
+	{
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
 }
 
 void ModelViewWindow::RenderMethod_BRDFEnvMap()
@@ -1186,6 +1289,7 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 
 		m_pModel->Draw(*m_pBRDFEnvModelEffect);
 		m_uiEnvInitSamp += ITR_COUNT;
+		m_fRenderingProgress = (float)m_uiEnvInitSamp / (float)(m_uiNPH * m_uiNTH) * 100.f;
 
 		m_pBRDFEnvModelEffect->deactiveEffect();
 
