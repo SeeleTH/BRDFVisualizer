@@ -474,6 +474,15 @@ int ModelViewWindow::OnInit()
 	//m_floorMaterial.specular = NPMathHelper::Vec3(1.f, 1.f, 1.f);
 	m_floorMaterial.shininess = 50.f;
 
+	m_dirLight.ambient = NPMathHelper::Vec3(0.1f, 0.1f, 0.1f);
+	m_dirLight.diffuse = NPMathHelper::Vec3(1.f, 1.f, 1.f);
+	m_dirLight.specular = NPMathHelper::Vec3(0.3f, 0.3f, 0.3f);
+
+	m_modelBlinnPhongMaterial.ambient = NPMathHelper::Vec3(0.1f, 0.1f, 0.1f);
+	m_modelBlinnPhongMaterial.diffuse = NPMathHelper::Vec3(1.f, 1.f, 1.f);
+	m_modelBlinnPhongMaterial.specular = NPMathHelper::Vec3(0.3f, 0.3f, 0.3f);
+	m_modelBlinnPhongMaterial.shininess = 25.f;
+
 	NPGLHelper::loadTextureFromFile("..\\texture\\floor.png", m_iFloorTex, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR, false);
 	NPGLHelper::loadTextureFromFile("..\\texture\\floor_nmap.png", m_iFloorNormalTex, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR, false);
 

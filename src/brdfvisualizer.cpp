@@ -9,11 +9,14 @@
 
 #include "ModelViewWindow.h"
 
+#define WINDOW_WIDTH 800
+#define WINDOW_HEIGHT 600
+
 
 int main()
 {
 	NPGLHelper::App mainApp;
-	return mainApp.Run(new BRDFVisualizer("BRDF Visualizer", 800, 600));
+	return mainApp.Run(new BRDFVisualizer("BRDF Visualizer", WINDOW_WIDTH, WINDOW_HEIGHT));
 }
 
 void TW_CALL BRDFButton(void * window)
@@ -279,7 +282,7 @@ void BRDFVisualizer::OpenModelWindow()
 {
 	if (!(m_uiModelWindowID > 0 && GetOwner() && GetOwner()->GetIsWindowActive(m_uiModelWindowID)))
 	{
-		m_uiModelWindowID = GetOwner()->AttachWindow(new ModelViewWindow("Model View", 800, 600));
+		m_uiModelWindowID = GetOwner()->AttachWindow(new ModelViewWindow("Model View", WINDOW_WIDTH, WINDOW_HEIGHT));
 	}
 
 	ModelViewWindow* modelViewWindow = (ModelViewWindow*)GetOwner()->GetWindow(m_uiModelWindowID);
