@@ -149,6 +149,7 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
     <ClInclude Include="..\include\mathhelper.h" />
     <ClInclude Include="..\include\ModelViewWindow.h" />
     <ClInclude Include="..\include\oshelper.h" />
+    <ClInclude Include="..\include\samplinghelper.h" />
     <ClInclude Include="..\include\templatehelper.h" />
     <ClInclude Include="meshhelper.h" />
   </ItemGroup>
@@ -157,6 +158,7 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
     <None Include="..\shader\BlinnPhongModelPS.glsl" />
     <None Include="..\shader\BlinnPhongNormalModelPS.glsl" />
     <None Include="..\shader\BRDFEnvModelPS.glsl" />
+    <None Include="..\shader\BRDFEnvSModelPS.glsl" />
     <None Include="..\shader\BRDFModelPS.glsl" />
     <None Include="..\shader\DepthPS.glsl" />
     <None Include="..\shader\DepthVS.glsl" />

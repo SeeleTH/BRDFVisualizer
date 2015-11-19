@@ -168,6 +168,7 @@ public:
 		RENDERINGMETHOD_DIFFUSEENVMAP,
 		RENDERINGMETHOD_BLINNPHONGENVMAP,
 		RENDERINGMETHOD_BRDFENVMAP,
+		RENDERINGMETHOD_BRDFENVMAPS,
 		RENDERINGMETHOD_N,
 		RENDERINGMETHOD_NONE,
 	};
@@ -186,6 +187,7 @@ protected:
 	void RenderMethod_DiffuseEnvMap();
 	void RenderMethod_BlinnPhongEnvMap();
 	void RenderMethod_BRDFEnvMap();
+	void RenderMethod_BRDFEnvMapS();
 
 	void RenderMethod_DiffuseDirLightInit();
 	void RenderMethod_BlinnPhongDirLightInit();
@@ -193,6 +195,7 @@ protected:
 	void RenderMethod_DiffuseEnvMapInit();
 	void RenderMethod_BlinnPhongEnvMapInit();
 	void RenderMethod_BRDFEnvMapInit();
+	void RenderMethod_BRDFEnvMapSInit();
 
 	void RenderMethod_DiffuseDirLightQuit();
 	void RenderMethod_BlinnPhongDirLightQuit();
@@ -200,6 +203,7 @@ protected:
 	void RenderMethod_DiffuseEnvMapQuit();
 	void RenderMethod_BlinnPhongEnvMapQuit();
 	void RenderMethod_BRDFEnvMapQuit();
+	void RenderMethod_BRDFEnvMapSQuit();
 
 	void Render_ShadowMap(const NPMathHelper::Vec3 lightDir);
 
@@ -222,7 +226,9 @@ protected:
 	NPGLHelper::Effect* m_pDiffuseEnvModelEffect;
 	NPGLHelper::Effect* m_pBlinnPhongEnvModelEffect;
 	NPGLHelper::Effect* m_pBRDFEnvModelEffect;
+	NPGLHelper::Effect* m_pBRDFEnvSModelEffect;
 	unsigned int m_uiEnvInitSamp;
+	unsigned int m_uiEnvShadowMaxSamp;
 	NPMathHelper::Mat4x4 m_matLastCam;
 	NPMathHelper::Mat4x4 m_matLastModel;
 	float m_fRenderingProgress;

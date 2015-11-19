@@ -71,6 +71,9 @@
     <ClInclude Include="..\include\atbhelper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\include\samplinghelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\shader\debugLinePS.glsl">
@@ -128,6 +131,9 @@
       <Filter>Shader Files</Filter>
     </None>
     <None Include="..\shader\DepthVS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\BRDFEnvSModelPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
   </ItemGroup>
