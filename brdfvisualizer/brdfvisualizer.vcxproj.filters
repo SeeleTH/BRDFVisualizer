@@ -136,5 +136,17 @@
     <None Include="..\shader\BRDFEnvSModelPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="..\shader\BlinnPhongEnvSModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\BlinnPhongNormalEnvSModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\DiffuseNormalEnvSModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\DiffuseEnvSModelPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

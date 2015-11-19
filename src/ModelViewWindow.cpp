@@ -344,6 +344,8 @@ int ModelViewWindow::OnInit()
 		{ RENDERINGMETHOD_DIFFUSEENVMAP, "Diffuse EnvMap" },
 		{ RENDERINGMETHOD_BLINNPHONGENVMAP, "Blinn-Phong EnvMap" },
 		{ RENDERINGMETHOD_BRDFENVMAP, "BRDF EnvMap" },
+		{ RENDERINGMETHOD_DIFFUSEENVMAPS, "Diffuse EnvMap Shadow" },
+		{ RENDERINGMETHOD_BLINNPHONGENVMAPS, "Blinn-Phong EnvMap Shadow" },
 		{ RENDERINGMETHOD_BRDFENVMAPS, "BRDF EnvMap Shadow" }
 	};
 	TwType renderType = TwDefineEnum("Rendering Method", renderEV, RENDERINGMETHOD_N);
@@ -478,6 +480,24 @@ int ModelViewWindow::OnInit()
 		m_pBRDFEnvModelEffect->linkEffect();
 	}
 	CHECK_GL_ERROR;
+	m_pDiffuseEnvSModelEffect = m_pShareContent->GetEffect("DiffuseEnvSModelEffect");
+	if (!m_pDiffuseEnvSModelEffect->GetIsLinked())
+	{
+		m_pDiffuseEnvSModelEffect->initEffect();
+		m_pDiffuseEnvSModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
+		m_pDiffuseEnvSModelEffect->attachShaderFromFile("..\\shader\\DiffuseEnvSModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pDiffuseEnvSModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
+	m_pBlinnPhongEnvSModelEffect = m_pShareContent->GetEffect("BlinnPhongEnvSModelEffect");
+	if (!m_pBlinnPhongEnvSModelEffect->GetIsLinked())
+	{
+		m_pBlinnPhongEnvSModelEffect->initEffect();
+		m_pBlinnPhongEnvSModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBlinnPhongEnvSModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongEnvSModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pBlinnPhongEnvSModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
 	m_pBRDFEnvSModelEffect = m_pShareContent->GetEffect("BRDFEnvSModelEffect");
 	if (!m_pBRDFEnvSModelEffect->GetIsLinked())
 	{
@@ -485,6 +505,24 @@ int ModelViewWindow::OnInit()
 		m_pBRDFEnvSModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
 		m_pBRDFEnvSModelEffect->attachShaderFromFile("..\\shader\\BRDFEnvSModelPS.glsl", GL_FRAGMENT_SHADER);
 		m_pBRDFEnvSModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
+	m_pBlinnPhongNormalEnvSModelEffect = m_pShareContent->GetEffect("BlinnPhongNormalEnvSModelEffect");
+	if (!m_pBlinnPhongNormalEnvSModelEffect->GetIsLinked())
+	{
+		m_pBlinnPhongNormalEnvSModelEffect->initEffect();
+		m_pBlinnPhongNormalEnvSModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
+		m_pBlinnPhongNormalEnvSModelEffect->attachShaderFromFile("..\\shader\\BlinnPhongNormalEnvSModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pBlinnPhongNormalEnvSModelEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
+	m_pDiffuseNormalEnvSModelEffect = m_pShareContent->GetEffect("DiffuseNormalEnvSModelEffect");
+	if (!m_pDiffuseNormalEnvSModelEffect->GetIsLinked())
+	{
+		m_pDiffuseNormalEnvSModelEffect->initEffect();
+		m_pDiffuseNormalEnvSModelEffect->attachShaderFromFile("..\\shader\\ModelVS.glsl", GL_VERTEX_SHADER);
+		m_pDiffuseNormalEnvSModelEffect->attachShaderFromFile("..\\shader\\DiffuseNormalEnvSModelPS.glsl", GL_FRAGMENT_SHADER);
+		m_pDiffuseNormalEnvSModelEffect->linkEffect();
 	}
 	CHECK_GL_ERROR;
 	m_pSkyboxEffect = m_pShareContent->GetEffect("SkyboxEffect");
@@ -639,6 +677,12 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		break;
 	case RENDERINGMETHOD_BRDFENVMAPS:
 		RenderMethod_BRDFEnvMapS();
+		break;
+	case RENDERINGMETHOD_DIFFUSEENVMAPS:
+		RenderMethod_DiffuseEnvMapS();
+		break;
+	case RENDERINGMETHOD_BLINNPHONGENVMAPS:
+		RenderMethod_BlinnPhongEnvMapS();
 		break;
 	}
 
@@ -810,6 +854,12 @@ void ModelViewWindow::SetRenderingMethod(RENDERINGMETHODS method)
 	case RENDERINGMETHOD_BRDFENVMAPS:
 		RenderMethod_BRDFEnvMapSQuit();
 		break;
+	case RENDERINGMETHOD_DIFFUSEENVMAPS:
+		RenderMethod_DiffuseEnvMapSQuit();
+		break;
+	case RENDERINGMETHOD_BLINNPHONGENVMAPS:
+		RenderMethod_BlinnPhongEnvMapSQuit();
+		break;
 	}
 
 	m_eRenderingMethod = method;
@@ -833,6 +883,12 @@ void ModelViewWindow::SetRenderingMethod(RENDERINGMETHODS method)
 		break;
 	case RENDERINGMETHOD_BRDFENVMAP:
 		RenderMethod_BRDFEnvMapInit();
+		break;
+	case RENDERINGMETHOD_DIFFUSEENVMAPS:
+		RenderMethod_DiffuseEnvMapSInit();
+		break;
+	case RENDERINGMETHOD_BLINNPHONGENVMAPS:
+		RenderMethod_BlinnPhongEnvMapSInit();
 		break;
 	case RENDERINGMETHOD_BRDFENVMAPS:
 		RenderMethod_BRDFEnvMapSInit();
@@ -1275,8 +1331,11 @@ void ModelViewWindow::RenderMethod_DiffuseEnvMap()
 
 	if (/*m_bIsLoadTexture &&*/ m_pModel)
 	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		if (m_uiEnvInitSamp > 0)
+		{
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
 
 		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
 		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
@@ -1376,8 +1435,11 @@ void ModelViewWindow::RenderMethod_BlinnPhongEnvMap()
 
 	if (/*m_bIsLoadTexture &&*/ m_pModel)
 	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		if (m_uiEnvInitSamp > 0)
+		{
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
 
 		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
 		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
@@ -1479,8 +1541,11 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 
 	if (/*m_bIsLoadTexture &&*/ m_pModel)
 	{
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		if (m_uiEnvInitSamp > 0)
+		{
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
 
 		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
 		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
@@ -1552,6 +1617,350 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 	}
 }
 
+void ModelViewWindow::RenderMethod_DiffuseEnvMapS()
+{
+	UpdateBRDFData();
+
+	if (NPMathHelper::Mat4x4(m_Cam.GetViewMatrix()) != m_matLastCam)
+	{
+		m_matLastCam = NPMathHelper::Mat4x4(m_Cam.GetViewMatrix());
+		m_uiEnvInitSamp = 0;
+	}
+
+	NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+		, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+		, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+
+	if (modelMat != m_matLastModel)
+	{
+		m_matLastModel = modelMat;
+		m_uiEnvInitSamp = 0;
+	}
+
+	if (m_uiEnvInitSamp + ITR_COUNT > m_uiEnvShadowMaxSamp)
+		return;
+
+	if (m_uiEnvInitSamp <= 0)
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	if (/*m_bIsLoadTexture &&*/ m_pModel)
+	{
+		// Samp Dir
+		NPMathHelper::Vec2 hemiSpace = NPSamplingHelper::hammersley2d(m_uiEnvInitSamp / 2, m_uiMaxSampling / 2);
+		NPMathHelper::Vec3 sampDir = NPSamplingHelper::hemisphereSample_uniform(hemiSpace._x, hemiSpace._y);
+		if (m_uiEnvInitSamp % 2 == 1)
+			sampDir._y *= -1;
+
+		// Depth rendering
+		if (m_pModel)
+		{
+			Render_ShadowMap(sampDir*-1.f);
+		}
+
+		if (m_bIsWireFrame)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		if (m_uiEnvInitSamp > 0)
+		{
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		if (m_bIsShowFloor)
+		{
+			NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
+			NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
+			m_pDiffuseNormalEnvSModelEffect->activeEffect();
+			m_pDiffuseNormalEnvSModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+			m_pDiffuseNormalEnvSModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+			m_pDiffuseNormalEnvSModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor());
+			m_pDiffuseNormalEnvSModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+			m_pDiffuseNormalEnvSModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
+			m_pDiffuseNormalEnvSModelEffect->SetFloat("env_multiplier", m_fEnvMapMultiplier);
+			m_pDiffuseNormalEnvSModelEffect->SetInt("max_samp", m_uiEnvShadowMaxSamp);
+
+			m_pDiffuseNormalEnvSModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+			if (m_bIsEnvMapLoaded)
+			{
+				glActiveTexture(GL_TEXTURE4);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap);
+				m_pDiffuseNormalEnvSModelEffect->SetInt("envmap", 4);
+			}
+
+			m_pDiffuseNormalEnvSModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+			m_pDiffuseNormalEnvSModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+			m_pDiffuseNormalEnvSModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+			glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+			glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+			m_pDiffuseNormalEnvSModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
+
+			glActiveTexture(GL_TEXTURE0); CHECK_GL_ERROR;
+			glBindTexture(GL_TEXTURE_2D, m_iFloorTex); CHECK_GL_ERROR;
+			m_pDiffuseNormalEnvSModelEffect->SetInt("texture_diffuse1", 0); CHECK_GL_ERROR;
+
+			glActiveTexture(GL_TEXTURE1); CHECK_GL_ERROR;
+			glBindTexture(GL_TEXTURE_2D, m_iFloorNormalTex); CHECK_GL_ERROR;
+			m_pDiffuseNormalEnvSModelEffect->SetInt("texture_normal1", 1); CHECK_GL_ERROR;
+
+			m_pDiffuseNormalEnvSModelEffect->SetVec3("material.ambient", m_floorMaterial.ambient);
+			m_pDiffuseNormalEnvSModelEffect->SetVec3("material.diffuse", m_floorMaterial.diffuse);
+			m_pDiffuseNormalEnvSModelEffect->SetVec3("material.specular", m_floorMaterial.specular);
+			m_pDiffuseNormalEnvSModelEffect->SetFloat("material.shininess", m_floorMaterial.shininess);
+
+			m_pDiffuseNormalEnvSModelEffect->SetVec3("samp_dir_w", sampDir);
+			glBindVertexArray(m_floor.GetVAO()); CHECK_GL_ERROR;
+			glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0); CHECK_GL_ERROR;
+			glBindVertexArray(0);
+			m_pDiffuseNormalEnvSModelEffect->deactiveEffect();
+		}
+
+		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+		m_pDiffuseEnvSModelEffect->activeEffect();
+		m_pDiffuseEnvSModelEffect->SetInt("n_th", m_uiNTH);
+		m_pDiffuseEnvSModelEffect->SetInt("n_ph", m_uiNPH);
+		m_pDiffuseEnvSModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pDiffuseEnvSModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		m_pDiffuseEnvSModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pDiffuseEnvSModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+		m_pDiffuseEnvSModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
+		m_pDiffuseEnvSModelEffect->SetFloat("env_multiplier", m_fEnvMapMultiplier);
+		m_pDiffuseEnvSModelEffect->SetInt("max_samp", m_uiEnvShadowMaxSamp);
+
+		m_pDiffuseEnvSModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+		if (m_bIsEnvMapLoaded)
+		{
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap);
+			m_pDiffuseEnvSModelEffect->SetInt("envmap", 4);
+		}
+
+		m_pDiffuseEnvSModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+		m_pDiffuseEnvSModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+		m_pDiffuseEnvSModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+		glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+		m_pDiffuseEnvSModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
+
+		m_pDiffuseEnvSModelEffect->SetVec3("material.ambient", m_floorMaterial.ambient);
+		m_pDiffuseEnvSModelEffect->SetVec3("material.diffuse", m_floorMaterial.diffuse);
+		m_pDiffuseEnvSModelEffect->SetVec3("material.specular", m_floorMaterial.specular);
+		m_pDiffuseEnvSModelEffect->SetFloat("material.shininess", m_floorMaterial.shininess);
+		m_pDiffuseEnvSModelEffect->SetVec3("samp_dir_w", sampDir);
+		m_pModel->Draw(*m_pDiffuseEnvSModelEffect);
+		m_uiEnvInitSamp += ITR_COUNT;
+		m_fRenderingProgress = (float)m_uiEnvInitSamp / (float)(m_uiEnvShadowMaxSamp)* 100.f;
+
+		m_pDiffuseEnvSModelEffect->deactiveEffect();
+
+		glDisable(GL_BLEND);
+
+		if (m_bIsWireFrame)
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+	}
+
+	if (m_bIsEnvMapLoaded)
+	{
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		glCullFace(GL_FRONT);
+		NPMathHelper::Mat4x4 noTranCamMath = m_Cam.GetViewMatrix();
+		noTranCamMath._03 = noTranCamMath._13 = noTranCamMath._23 = 0.f;
+		m_pSkyboxEffect->activeEffect();
+		m_pSkyboxEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pSkyboxEffect->SetMatrix("view", noTranCamMath.GetDataColumnMajor());
+		m_pSkyboxEffect->SetMatrix("model", NPMathHelper::Mat4x4::scaleTransform(1.0f, 1.0f, 1.0f).GetDataColumnMajor());
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap);
+		m_pSkyboxEffect->SetInt("envmap", 0);
+
+		glBindVertexArray(m_skybox.GetVAO());
+		glDrawElements(GL_TRIANGLES, m_skybox.GetIndicesSize(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		m_pSkyboxEffect->deactiveEffect();
+		glCullFace(GL_BACK);
+	}
+}
+
+void ModelViewWindow::RenderMethod_BlinnPhongEnvMapS()
+{
+	UpdateBRDFData();
+
+	if (NPMathHelper::Mat4x4(m_Cam.GetViewMatrix()) != m_matLastCam)
+	{
+		m_matLastCam = NPMathHelper::Mat4x4(m_Cam.GetViewMatrix());
+		m_uiEnvInitSamp = 0;
+	}
+
+	NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+		, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+		, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+
+	if (modelMat != m_matLastModel)
+	{
+		m_matLastModel = modelMat;
+		m_uiEnvInitSamp = 0;
+	}
+
+	if (m_uiEnvInitSamp + ITR_COUNT > m_uiEnvShadowMaxSamp)
+		return;
+
+	if (m_uiEnvInitSamp <= 0)
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	if (/*m_bIsLoadTexture &&*/ m_pModel)
+	{
+		// Samp Dir
+		NPMathHelper::Vec2 hemiSpace = NPSamplingHelper::hammersley2d(m_uiEnvInitSamp / 2, m_uiMaxSampling / 2);
+		NPMathHelper::Vec3 sampDir = NPSamplingHelper::hemisphereSample_uniform(hemiSpace._x, hemiSpace._y);
+		if (m_uiEnvInitSamp % 2 == 1)
+			sampDir._y *= -1;
+
+		// Depth rendering
+		if (m_pModel)
+		{
+			Render_ShadowMap(sampDir*-1.f);
+		}
+
+		if (m_bIsWireFrame)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		if (m_uiEnvInitSamp > 0)
+		{
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
+
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		if (m_bIsShowFloor)
+		{
+			NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
+			NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
+			m_pBlinnPhongNormalEnvSModelEffect->activeEffect();
+			m_pBlinnPhongNormalEnvSModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+			m_pBlinnPhongNormalEnvSModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+			m_pBlinnPhongNormalEnvSModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor());
+			m_pBlinnPhongNormalEnvSModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+			m_pBlinnPhongNormalEnvSModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
+			m_pBlinnPhongNormalEnvSModelEffect->SetFloat("env_multiplier", m_fEnvMapMultiplier);
+			m_pBlinnPhongNormalEnvSModelEffect->SetInt("max_samp", m_uiEnvShadowMaxSamp);
+
+			m_pBlinnPhongNormalEnvSModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+			if (m_bIsEnvMapLoaded)
+			{
+				glActiveTexture(GL_TEXTURE4);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap);
+				m_pBlinnPhongNormalEnvSModelEffect->SetInt("envmap", 4);
+			}
+
+			m_pBlinnPhongNormalEnvSModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+			m_pBlinnPhongNormalEnvSModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+			m_pBlinnPhongNormalEnvSModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+			glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+			glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+			m_pBlinnPhongNormalEnvSModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
+
+			glActiveTexture(GL_TEXTURE0); CHECK_GL_ERROR;
+			glBindTexture(GL_TEXTURE_2D, m_iFloorTex); CHECK_GL_ERROR;
+			m_pBlinnPhongNormalEnvSModelEffect->SetInt("texture_diffuse1", 0); CHECK_GL_ERROR;
+
+			glActiveTexture(GL_TEXTURE1); CHECK_GL_ERROR;
+			glBindTexture(GL_TEXTURE_2D, m_iFloorNormalTex); CHECK_GL_ERROR;
+			m_pBlinnPhongNormalEnvSModelEffect->SetInt("texture_normal1", 1); CHECK_GL_ERROR;
+
+			m_pBlinnPhongNormalEnvSModelEffect->SetVec3("material.ambient", m_floorMaterial.ambient);
+			m_pBlinnPhongNormalEnvSModelEffect->SetVec3("material.diffuse", m_floorMaterial.diffuse);
+			m_pBlinnPhongNormalEnvSModelEffect->SetVec3("material.specular", m_floorMaterial.specular);
+			m_pBlinnPhongNormalEnvSModelEffect->SetFloat("material.shininess", m_floorMaterial.shininess);
+
+			m_pBlinnPhongNormalEnvSModelEffect->SetVec3("samp_dir_w", sampDir);
+			glBindVertexArray(m_floor.GetVAO()); CHECK_GL_ERROR;
+			glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0); CHECK_GL_ERROR;
+			glBindVertexArray(0);
+			m_pBlinnPhongNormalEnvSModelEffect->deactiveEffect();
+		}
+
+		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
+		m_pBlinnPhongEnvSModelEffect->activeEffect();
+		m_pBlinnPhongEnvSModelEffect->SetInt("n_th", m_uiNTH);
+		m_pBlinnPhongEnvSModelEffect->SetInt("n_ph", m_uiNPH);
+		m_pBlinnPhongEnvSModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pBlinnPhongEnvSModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+		m_pBlinnPhongEnvSModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+		m_pBlinnPhongEnvSModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+		m_pBlinnPhongEnvSModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
+		m_pBlinnPhongEnvSModelEffect->SetFloat("env_multiplier", m_fEnvMapMultiplier);
+		m_pBlinnPhongEnvSModelEffect->SetInt("max_samp", m_uiEnvShadowMaxSamp);
+
+		m_pBlinnPhongEnvSModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+		if (m_bIsEnvMapLoaded)
+		{
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap);
+			m_pBlinnPhongEnvSModelEffect->SetInt("envmap", 4);
+		}
+
+		m_pBlinnPhongEnvSModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+		m_pBlinnPhongEnvSModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+		m_pBlinnPhongEnvSModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+		glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+		m_pBlinnPhongEnvSModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
+
+		m_pBlinnPhongEnvSModelEffect->SetVec3("material.ambient", m_floorMaterial.ambient);
+		m_pBlinnPhongEnvSModelEffect->SetVec3("material.diffuse", m_floorMaterial.diffuse);
+		m_pBlinnPhongEnvSModelEffect->SetVec3("material.specular", m_floorMaterial.specular);
+		m_pBlinnPhongEnvSModelEffect->SetFloat("material.shininess", m_floorMaterial.shininess);
+		m_pBlinnPhongEnvSModelEffect->SetVec3("samp_dir_w", sampDir);
+		m_pModel->Draw(*m_pBlinnPhongEnvSModelEffect);
+		m_uiEnvInitSamp += ITR_COUNT;
+		m_fRenderingProgress = (float)m_uiEnvInitSamp / (float)(m_uiEnvShadowMaxSamp)* 100.f;
+
+		m_pBlinnPhongEnvSModelEffect->deactiveEffect();
+
+		glDisable(GL_BLEND);
+
+		if (m_bIsWireFrame)
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+	}
+
+	if (m_bIsEnvMapLoaded)
+	{
+		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		glCullFace(GL_FRONT);
+		NPMathHelper::Mat4x4 noTranCamMath = m_Cam.GetViewMatrix();
+		noTranCamMath._03 = noTranCamMath._13 = noTranCamMath._23 = 0.f;
+		m_pSkyboxEffect->activeEffect();
+		m_pSkyboxEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+		m_pSkyboxEffect->SetMatrix("view", noTranCamMath.GetDataColumnMajor());
+		m_pSkyboxEffect->SetMatrix("model", NPMathHelper::Mat4x4::scaleTransform(1.0f, 1.0f, 1.0f).GetDataColumnMajor());
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap);
+		m_pSkyboxEffect->SetInt("envmap", 0);
+
+		glBindVertexArray(m_skybox.GetVAO());
+		glDrawElements(GL_TRIANGLES, m_skybox.GetIndicesSize(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		m_pSkyboxEffect->deactiveEffect();
+		glCullFace(GL_BACK);
+	}
+}
+
 void ModelViewWindow::RenderMethod_BRDFEnvMapS()
 {
 	UpdateBRDFData();
@@ -1578,7 +1987,6 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapS()
 	if (m_uiEnvInitSamp <= 0)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
 	if (/*m_bIsLoadTexture &&*/ m_pModel)
 	{
 		// Samp Dir
@@ -1598,10 +2006,62 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapS()
 		else
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		if (m_uiEnvInitSamp > 0)
+		{
+			glEnable(GL_BLEND);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
 
 		NPMathHelper::Mat4x4 myProj = NPMathHelper::Mat4x4::perspectiveProjection(M_PI * 0.5f, (float)m_iSizeW / (float)m_iSizeH, 0.1f, 100.0f);
+		if (m_bIsShowFloor)
+		{
+			NPMathHelper::Mat4x4 floorModelMat = NPMathHelper::Mat4x4::Identity();
+			NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(floorModelMat));
+			m_pBlinnPhongNormalEnvSModelEffect->activeEffect();
+			m_pBlinnPhongNormalEnvSModelEffect->SetMatrix("projection", myProj.GetDataColumnMajor());
+			m_pBlinnPhongNormalEnvSModelEffect->SetMatrix("view", m_Cam.GetViewMatrix());
+			m_pBlinnPhongNormalEnvSModelEffect->SetMatrix("model", floorModelMat.GetDataColumnMajor());
+			m_pBlinnPhongNormalEnvSModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
+			m_pBlinnPhongNormalEnvSModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
+			m_pBlinnPhongNormalEnvSModelEffect->SetFloat("env_multiplier", m_fEnvMapMultiplier);
+			m_pBlinnPhongNormalEnvSModelEffect->SetInt("max_samp", m_uiEnvShadowMaxSamp);
+
+			m_pBlinnPhongNormalEnvSModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+			if (m_bIsEnvMapLoaded)
+			{
+				glActiveTexture(GL_TEXTURE4);
+				glBindTexture(GL_TEXTURE_CUBE_MAP, m_uiEnvMap);
+				m_pBlinnPhongNormalEnvSModelEffect->SetInt("envmap", 4);
+			}
+
+			m_pBlinnPhongNormalEnvSModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+			m_pBlinnPhongNormalEnvSModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+			m_pBlinnPhongNormalEnvSModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+			glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+			glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+			m_pBlinnPhongNormalEnvSModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
+
+			glActiveTexture(GL_TEXTURE0); CHECK_GL_ERROR;
+			glBindTexture(GL_TEXTURE_2D, m_iFloorTex); CHECK_GL_ERROR;
+			m_pBlinnPhongNormalEnvSModelEffect->SetInt("texture_diffuse1", 0); CHECK_GL_ERROR;
+
+			glActiveTexture(GL_TEXTURE1); CHECK_GL_ERROR;
+			glBindTexture(GL_TEXTURE_2D, m_iFloorNormalTex); CHECK_GL_ERROR;
+			m_pBlinnPhongNormalEnvSModelEffect->SetInt("texture_normal1", 1); CHECK_GL_ERROR;
+
+			m_pBlinnPhongNormalEnvSModelEffect->SetVec3("material.ambient", m_floorMaterial.ambient);
+			m_pBlinnPhongNormalEnvSModelEffect->SetVec3("material.diffuse", m_floorMaterial.diffuse);
+			m_pBlinnPhongNormalEnvSModelEffect->SetVec3("material.specular", m_floorMaterial.specular);
+			m_pBlinnPhongNormalEnvSModelEffect->SetFloat("material.shininess", m_floorMaterial.shininess);
+
+			m_pBlinnPhongNormalEnvSModelEffect->SetVec3("samp_dir_w", sampDir);
+			glBindVertexArray(m_floor.GetVAO()); CHECK_GL_ERROR;
+			glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0); CHECK_GL_ERROR;
+			glBindVertexArray(0);
+			m_pBlinnPhongNormalEnvSModelEffect->deactiveEffect();
+		}
+
 		NPMathHelper::Mat4x4 tranInvModelMat = NPMathHelper::Mat4x4::transpose(NPMathHelper::Mat4x4::inverse(modelMat));
 		m_pBRDFEnvSModelEffect->activeEffect();
 		m_pBRDFEnvSModelEffect->SetInt("n_th", m_uiNTH);
@@ -1630,12 +2090,12 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapS()
 			m_pBRDFEnvSModelEffect->SetInt("envmap", 4);
 		}
 
-		m_pBRDFModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
-		m_pBRDFModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
-		m_pBRDFModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+		m_pBRDFEnvSModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+		m_pBRDFEnvSModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+		m_pBRDFEnvSModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
 		glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
 		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
-		m_pBRDFModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
+		m_pBRDFEnvSModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
 
 		m_pBRDFEnvSModelEffect->SetVec3("samp_dir_w", sampDir);
 		m_pModel->Draw(*m_pBRDFEnvSModelEffect);
@@ -1713,6 +2173,20 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapInit()
 	m_matLastModel = NPMathHelper::Mat4x4::Identity();
 }
 
+void ModelViewWindow::RenderMethod_DiffuseEnvMapSInit()
+{
+	m_uiEnvInitSamp = 0;
+	m_matLastCam = NPMathHelper::Mat4x4::Identity();
+	m_matLastModel = NPMathHelper::Mat4x4::Identity();
+}
+
+void ModelViewWindow::RenderMethod_BlinnPhongEnvMapSInit()
+{
+	m_uiEnvInitSamp = 0;
+	m_matLastCam = NPMathHelper::Mat4x4::Identity();
+	m_matLastModel = NPMathHelper::Mat4x4::Identity();
+}
+
 void ModelViewWindow::RenderMethod_BRDFEnvMapSInit()
 {
 	m_uiEnvInitSamp = 0;
@@ -1747,6 +2221,16 @@ void ModelViewWindow::RenderMethod_BlinnPhongEnvMapQuit()
 }
 
 void ModelViewWindow::RenderMethod_BRDFEnvMapQuit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_DiffuseEnvMapSQuit()
+{
+
+}
+
+void ModelViewWindow::RenderMethod_BlinnPhongEnvMapSQuit()
 {
 
 }

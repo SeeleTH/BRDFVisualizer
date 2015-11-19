@@ -155,6 +155,8 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
   </ItemGroup>
   <ItemGroup>
     <None Include="..\shader\BlinnPhongEnvModelPS.glsl" />
+    <None Include="..\shader\BlinnPhongNormalEnvSModelPS.glsl" />
+    <None Include="..\shader\BlinnPhongEnvSModelPS.glsl" />
     <None Include="..\shader\BlinnPhongModelPS.glsl" />
     <None Include="..\shader\BlinnPhongNormalModelPS.glsl" />
     <None Include="..\shader\BRDFEnvModelPS.glsl" />
@@ -162,6 +164,8 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
     <None Include="..\shader\BRDFModelPS.glsl" />
     <None Include="..\shader\DepthPS.glsl" />
     <None Include="..\shader\DepthVS.glsl" />
+    <None Include="..\shader\DiffuseEnvSModelPS.glsl" />
+    <None Include="..\shader\DiffuseNormalEnvSModelPS.glsl" />
     <None Include="..\shader\DiffuseNormalModelPS.glsl" />
     <None Include="..\shader\ModelVS.glsl" />
     <None Include="..\shader\debugLinePS.glsl" />
