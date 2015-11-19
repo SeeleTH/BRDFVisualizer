@@ -1578,13 +1578,26 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapS()
 	if (m_uiEnvInitSamp <= 0)
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	if (m_bIsWireFrame)
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	else
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 	if (/*m_bIsLoadTexture &&*/ m_pModel)
 	{
+		// Samp Dir
+		NPMathHelper::Vec2 hemiSpace = NPSamplingHelper::hammersley2d(m_uiEnvInitSamp / 2, m_uiMaxSampling / 2);
+		NPMathHelper::Vec3 sampDir = NPSamplingHelper::hemisphereSample_uniform(hemiSpace._x, hemiSpace._y);
+		if (m_uiEnvInitSamp % 2 == 1)
+			sampDir._y *= -1;
+
+		// Depth rendering
+		if (m_pModel)
+		{
+			Render_ShadowMap(sampDir*-1.f);
+		}
+
+		if (m_bIsWireFrame)
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		else
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -1617,11 +1630,12 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapS()
 			m_pBRDFEnvSModelEffect->SetInt("envmap", 4);
 		}
 
-		// Samp Dir
-		NPMathHelper::Vec2 hemiSpace = NPSamplingHelper::hammersley2d(m_uiEnvInitSamp * 0.5f, m_uiMaxSampling * 0.5f);
-		NPMathHelper::Vec3 sampDir = NPSamplingHelper::hemisphereSample_uniform(hemiSpace._x, hemiSpace._y);
-		if (m_uiEnvInitSamp % 2 == 1)
-			sampDir._y *= -1;
+		m_pBRDFModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+		m_pBRDFModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+		m_pBRDFModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+		glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+		m_pBRDFModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
 
 		m_pBRDFEnvSModelEffect->SetVec3("samp_dir_w", sampDir);
 		m_pModel->Draw(*m_pBRDFEnvSModelEffect);
@@ -1631,6 +1645,11 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapS()
 		m_pBRDFEnvSModelEffect->deactiveEffect();
 
 		glDisable(GL_BLEND);
+
+		if (m_bIsWireFrame)
+		{
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
 	}
 
 	if (m_bIsEnvMapLoaded)
@@ -1654,11 +1673,6 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapS()
 		glBindTexture(GL_TEXTURE_2D, 0);
 		m_pSkyboxEffect->deactiveEffect();
 		glCullFace(GL_BACK);
-	}
-
-	if (m_bIsWireFrame)
-	{
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
 }
 

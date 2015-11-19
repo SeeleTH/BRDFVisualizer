@@ -6,12 +6,14 @@ in vec2 outTexCoord;
 in vec3 outNormal;
 in vec4 outTangent;
 in vec3 outPosW;
+in vec4 outShadowPosW;
 
 out vec4 color;
 
 uniform sampler2D texture_brdf;
 uniform sampler2D texture_diffuse1;
 uniform sampler2D texture_specular1;
+uniform sampler2D texture_shadow;
 
 uniform samplerCube envmap;
 
@@ -22,6 +24,30 @@ uniform int max_samp;
 uniform int init_samp;
 uniform vec3 samp_dir_w;
 uniform vec3 viewPos;
+uniform float biasMin;
+uniform float biasMax;
+
+float shadowCalculation(vec4 shadowpos, float bias)
+{
+	vec3 projCoords = (shadowpos / shadowpos.w).xyz;
+	projCoords = projCoords * 0.5f + 0.5f;
+	if (projCoords.z > 1.0)
+		return 0.0;
+	float closestDepth = texture(texture_shadow, projCoords.xy).r;
+	float currentDepth = projCoords.z;
+	float shadow = 0.f;
+	vec2 texelSize = 1.0f / textureSize(texture_shadow, 0);
+	for (int x = -1; x <= 1; x++)
+	{
+		for (int y = -1; y <= 1; y++)
+		{
+			float pcfDepth = texture(texture_shadow, projCoords.xy + vec2(x, y) * texelSize).r;
+			shadow += currentDepth - bias > pcfDepth ? 1.0f : 0.f;
+		}
+	}
+	shadow /= 9.0f;
+	return shadow;
+}
 
 void GetVectorIndex(vec3 value, out float th, out float ph)
 {
@@ -113,16 +139,17 @@ void main()
 	vec3 viewDirL = ttnb * viewDir;
 	vec4 diff = texture(texture_diffuse1, outTexCoord);
 
-	for (int i = 0; i < ITR_COUNT; i++)
+	vec3 sampDir = ttnb * normalize(samp_dir_w);
+	if (sampDir.y > 0.f)
 	{
-		vec3 sampDir = ttnb * samp_dir_w;
-		if (sampDir.y > 0.f)
-		{
-			vec3 brdf = SampleBRDF_Linear(sampDir, -viewDirL);
-			vec3 lightColor = env_multiplier * texture(envmap, samp_dir_w).rgb;
-			result = vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f);
-			result.a = float(ITR_COUNT) / (init_samp + float(ITR_COUNT));
-		}
+		vec3 brdf = clamp(SampleBRDF_Linear(sampDir, -viewDirL), vec3(0.f), vec3(1.0f));
+		vec3 lightColor = env_multiplier * texture(envmap, samp_dir_w).rgb;
+		result = 2.f * vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f);
+
+		float shadowBias = max(biasMax * (1.0f - dot(normal, samp_dir_w)), biasMin);
+		float shadowFraction = shadowCalculation(outShadowPosW, shadowBias);
+		result = (1.f - shadowFraction) * result;
 	}
+	result.a = float(ITR_COUNT) / (init_samp + float(ITR_COUNT));
 	color = result;
 }
