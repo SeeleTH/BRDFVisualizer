@@ -9,15 +9,18 @@ out vec3 outPosW;
 out vec2 outTexCoord;
 out vec3 outNormal;
 out vec4 outTangent;
+out vec4 outShadowPosW;
 
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 tranInvModel;
+uniform mat4 shadowMap;
 
 void main()
 {
 	outPosW = (model * vec4(position, 1.0)).xyz;
+	outShadowPosW = shadowMap * vec4(outPosW, 1.0f);
 	gl_Position = projection * view * model * vec4(position, 1.0);
 	outNormal = (tranInvModel * vec4(normal, 0.0)).xyz;
 	outTangent = model * vec4(tangent, 0.0);

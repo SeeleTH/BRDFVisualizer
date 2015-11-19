@@ -124,5 +124,11 @@
     <None Include="..\shader\BlinnPhongEnvModelPS.glsl">
       <Filter>Shader Files</Filter>
     </None>
+    <None Include="..\shader\DepthPS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="..\shader\DepthVS.glsl">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

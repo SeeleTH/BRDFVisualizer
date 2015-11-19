@@ -122,6 +122,7 @@ namespace BRDFModel
 
 		void Draw(NPGLHelper::Effect &effect);
 		bool LoadModel(const char* path);
+		inline SphericalSpace GetSphericalSpace() { return m_space; }
 
 	protected:
 		void ProcessNode(aiNode* node, const aiScene* scene);
@@ -200,6 +201,8 @@ protected:
 	void RenderMethod_BlinnPhongEnvMapQuit();
 	void RenderMethod_BRDFEnvMapQuit();
 
+	void Render_ShadowMap(const NPMathHelper::Vec3 lightDir);
+
 	// Render Quad
 	void RenderScreenQuad();
 	GLuint m_uiVBOQuad;
@@ -274,6 +277,16 @@ protected:
 	float m_fLightIntMultiplier;
 	float m_fInSenX, m_fInSenY;
 	float m_fInPitch, m_fInYaw;
+
+	// Shadow Map
+	float m_fShadowBiasMin;
+	float m_fShadowBiasMax;
+	NPGLHelper::Effect* m_pDepthEffect;
+	GLuint m_uiDepthMapFBO;
+	GLuint m_uiDepthMapTex;
+	NPMathHelper::Mat4x4 m_matShadowMapMat;
+	static const unsigned int SHADOW_WIDTH;
+	static const unsigned int SHADOW_HEIGHT;
 
 	// Env Map
 	float m_fEnvMapMultiplier;

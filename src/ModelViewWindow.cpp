@@ -230,6 +230,10 @@ void TW_CALL GetRenderingMethodCallback(void *value, void *clientData)
 	}
 }
 
+
+const unsigned int ModelViewWindow::SHADOW_WIDTH = 2048;
+const unsigned int ModelViewWindow::SHADOW_HEIGHT = 2048;
+
 ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int sizeH)
 	: Window(name, sizeW, sizeH)
 	, m_Cam(1.f, 0.f, M_PI * 0.25f)
@@ -275,6 +279,7 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_pDiffuseEnvModelEffect(nullptr)
 	, m_pBlinnPhongEnvModelEffect(nullptr)
 	, m_pBRDFEnvModelEffect(nullptr)
+	, m_pDepthEffect(nullptr)
 	, m_fExposure(1.f)
 	, m_fEnvMapMultiplier(1.f)
 	, m_bIsShowFloor(true)
@@ -282,6 +287,8 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_iFloorNormalTex(0)
 	, m_uiMaxSampling(1024)
 	, m_fRenderingProgress(0.f)
+	, m_fShadowBiasMin(0.005f)
+	, m_fShadowBiasMax(0.05f)
 {
 }
 
@@ -350,6 +357,11 @@ int ModelViewWindow::OnInit()
 	ATB_ASSERT(TwAddVarRW(mainBar, "Intensity Multiplier", TW_TYPE_FLOAT, &m_fLightIntMultiplier,
 		" label='Intensity Multiplier' help='Multiply light color' group='Directional Light' step=0.1"));
 	//ATB_ASSERT(TwAddVarRW(mainBar, "Direction", TW_TYPE_DIR3F, &m_f3LightDir, " group='Directional Light' "));
+
+	ATB_ASSERT(TwAddVarRW(mainBar, "Bias Min", TW_TYPE_FLOAT, &m_fShadowBiasMin,
+		"group='Shadow Mapping'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Bias Max", TW_TYPE_FLOAT, &m_fShadowBiasMax,
+		"group='Shadow Mapping'"));
 
 	ATB_ASSERT(TwAddVarRW(mainBar, "Model Ambient Color", TW_TYPE_COLOR3F, &m_modelBlinnPhongMaterial.ambient, " group='Material' "));
 	ATB_ASSERT(TwAddVarRW(mainBar, "Model Diffuse Color", TW_TYPE_COLOR3F, &m_modelBlinnPhongMaterial.diffuse, " group='Material' "));
@@ -472,6 +484,15 @@ int ModelViewWindow::OnInit()
 		m_pSkyboxEffect->linkEffect();
 	}
 	CHECK_GL_ERROR;
+	m_pDepthEffect = m_pShareContent->GetEffect("DepthEffect");
+	if (!m_pDepthEffect->GetIsLinked())
+	{
+		m_pDepthEffect->initEffect();
+		m_pDepthEffect->attachShaderFromFile("..\\shader\\DepthVS.glsl", GL_VERTEX_SHADER);
+		m_pDepthEffect->attachShaderFromFile("..\\shader\\DepthPS.glsl", GL_FRAGMENT_SHADER);
+		m_pDepthEffect->linkEffect();
+	}
+	CHECK_GL_ERROR;
 
 	m_skybox.SetGeometry(NPGeoHelper::GetBoxShape(1.f, 1.f, 1.f));
 	m_floor.SetGeometry(NPGeoHelper::GetFloorPlaneShape(10.f, 10.f, 10.f), 1);
@@ -520,6 +541,26 @@ int ModelViewWindow::OnInit()
 		m_pFinalComposeEffect->attachShaderFromFile("..\\shader\\FinalComposePS.glsl", GL_FRAGMENT_SHADER);
 		m_pFinalComposeEffect->linkEffect();
 	}
+
+	// Shadow Mapping
+	{
+		glGenFramebuffers(1, &m_uiDepthMapFBO);
+		glGenTextures(1, &m_uiDepthMapTex);
+		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+		GLfloat borderColor[] = { 1.0, 1.0, 1.0, 1.0 };
+		glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+		glBindFramebuffer(GL_FRAMEBUFFER, m_uiDepthMapFBO);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_uiDepthMapTex, 0);
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
+
 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
@@ -815,6 +856,15 @@ void ModelViewWindow::RenderMethod_DiffuseDirLight()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	// Depth rendering
+	if (m_pModel)
+	{
+		m_dirLight.dir._y = -sin(m_fInYaw);
+		m_dirLight.dir._x = -cos(m_fInYaw) * sin(m_fInPitch);
+		m_dirLight.dir._z = -cos(m_fInYaw) * cos(m_fInPitch);
+		Render_ShadowMap(m_dirLight.dir);
+	}
+
 	if (m_bIsWireFrame)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 	else
@@ -849,6 +899,13 @@ void ModelViewWindow::RenderMethod_DiffuseDirLight()
 		m_pDiffuseModelEffect->SetVec3("light.dir", m_dirLight.dir);
 
 		m_pDiffuseModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+		m_pDiffuseModelEffect->SetFloat("biasMin", m_fShadowBiasMin); CHECK_GL_ERROR;
+		m_pDiffuseModelEffect->SetFloat("biasMax", m_fShadowBiasMax); CHECK_GL_ERROR;
+		m_pDiffuseModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor()); CHECK_GL_ERROR;
+		glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+		m_pDiffuseModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
 
 		m_pModel->Draw(*m_pDiffuseModelEffect);
 
@@ -885,6 +942,13 @@ void ModelViewWindow::RenderMethod_DiffuseDirLight()
 
 		m_pDiffuseNormalModelEffect->SetVec3("viewPos", m_Cam.GetPos());
 
+		m_pDiffuseNormalModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+		m_pDiffuseNormalModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+		m_pDiffuseNormalModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+		glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+		m_pDiffuseNormalModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
+
 		glActiveTexture(GL_TEXTURE0); CHECK_GL_ERROR;
 		glBindTexture(GL_TEXTURE_2D, m_iFloorTex); CHECK_GL_ERROR;
 		m_pDiffuseNormalModelEffect->SetInt("texture_diffuse1", 0); CHECK_GL_ERROR;
@@ -915,6 +979,15 @@ void ModelViewWindow::RenderMethod_BlinnPhongDirLight()
 {
 	m_fRenderingProgress = 100.0f;
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Depth rendering
+	if (m_pModel)
+	{
+		m_dirLight.dir._y = -sin(m_fInYaw);
+		m_dirLight.dir._x = -cos(m_fInYaw) * sin(m_fInPitch);
+		m_dirLight.dir._z = -cos(m_fInYaw) * cos(m_fInPitch);
+		Render_ShadowMap(m_dirLight.dir);
+	}
 
 	if (m_bIsWireFrame)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -951,6 +1024,13 @@ void ModelViewWindow::RenderMethod_BlinnPhongDirLight()
 
 		m_pBlinnPhongModelEffect->SetVec3("viewPos", m_Cam.GetPos());
 
+		m_pBlinnPhongModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+		m_pBlinnPhongModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+		m_pBlinnPhongModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+		glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+		m_pBlinnPhongModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
+
 		m_pModel->Draw(*m_pBlinnPhongModelEffect);
 
 
@@ -986,6 +1066,13 @@ void ModelViewWindow::RenderMethod_BlinnPhongDirLight()
 
 		m_pBlinnPhongNormalModelEffect->SetVec3("viewPos", m_Cam.GetPos());
 
+		m_pBlinnPhongNormalModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+		m_pBlinnPhongNormalModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+		m_pBlinnPhongNormalModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+		glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+		m_pBlinnPhongNormalModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
+
 		glActiveTexture(GL_TEXTURE0); CHECK_GL_ERROR;
 		glBindTexture(GL_TEXTURE_2D, m_iFloorTex); CHECK_GL_ERROR;
 		m_pBlinnPhongNormalModelEffect->SetInt("texture_diffuse1", 0); CHECK_GL_ERROR;
@@ -1015,6 +1102,15 @@ void ModelViewWindow::RenderMethod_BlinnPhongDirLight()
 void ModelViewWindow::RenderMethod_BRDFDirLight()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	// Depth rendering
+	if (m_pModel)
+	{
+		m_dirLight.dir._y = -sin(m_fInYaw);
+		m_dirLight.dir._x = -cos(m_fInYaw) * sin(m_fInPitch);
+		m_dirLight.dir._z = -cos(m_fInYaw) * cos(m_fInPitch);
+		Render_ShadowMap(m_dirLight.dir);
+	}
 
 	if (m_bIsWireFrame)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -1046,6 +1142,13 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 		m_pBRDFModelEffect->SetVec3("lightColor", m_v3LightColor.x * m_fLightIntMultiplier
 			, m_v3LightColor.y * m_fLightIntMultiplier, m_v3LightColor.z * m_fLightIntMultiplier);
 		m_pBRDFModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+		m_pBRDFModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+		m_pBRDFModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+		m_pBRDFModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+		glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+		m_pBRDFModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
 
 		if (m_bIsLoadTexture)
 		{
@@ -1086,6 +1189,13 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 		m_pBlinnPhongNormalModelEffect->SetVec3("light.dir", m_dirLight.dir);
 
 		m_pBlinnPhongNormalModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+		m_pBlinnPhongNormalModelEffect->SetFloat("biasMin", m_fShadowBiasMin);
+		m_pBlinnPhongNormalModelEffect->SetFloat("biasMax", m_fShadowBiasMax);
+		m_pBlinnPhongNormalModelEffect->SetMatrix("shadowMap", m_matShadowMapMat.GetDataColumnMajor());
+		glActiveTexture(GL_TEXTURE5); CHECK_GL_ERROR;
+		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
+		m_pBlinnPhongNormalModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
 
 		glActiveTexture(GL_TEXTURE0); CHECK_GL_ERROR;
 		glBindTexture(GL_TEXTURE_2D, m_iFloorTex); CHECK_GL_ERROR;
@@ -1487,6 +1597,39 @@ void ModelViewWindow::RenderMethod_BlinnPhongEnvMapQuit()
 void ModelViewWindow::RenderMethod_BRDFEnvMapQuit()
 {
 
+}
+
+
+void ModelViewWindow::Render_ShadowMap(const NPMathHelper::Vec3 lightDir)
+{
+	BRDFModel::SphericalSpace space = m_pModel->GetSphericalSpace();
+	NPMathHelper::Mat4x4 lightProj = NPMathHelper::Mat4x4::orthogonalProjection(2.0f*space.m_fRadius, 2.0f*space.m_fRadius, 1.f, 2.f*space.m_fRadius);
+	NPMathHelper::Mat4x4 lightView = NPMathHelper::Mat4x4::lookAt(space.m_v3Center - lightDir * space.m_fRadius, space.m_v3Center, NPMathHelper::Vec3(0.f, 1.f, 0.f));
+	m_matShadowMapMat = NPMathHelper::Mat4x4::mul(lightProj, lightView);
+
+	glDisable(GL_CULL_FACE);
+	glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_uiDepthMapFBO);
+
+	glClear(GL_DEPTH_BUFFER_BIT);
+	m_pDepthEffect->activeEffect();
+	m_pDepthEffect->SetMatrix("lightMat", m_matShadowMapMat.GetDataColumnMajor());
+	NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+		, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+		, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+	m_pDepthEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
+	m_pModel->Draw(*m_pDepthEffect);
+	if (m_bIsShowFloor)
+	{
+		m_pDepthEffect->SetMatrix("model", NPMathHelper::Mat4x4::Identity().GetDataColumnMajor());
+		glBindVertexArray(m_floor.GetVAO());
+		glDrawElements(GL_TRIANGLES, m_floor.GetIndicesSize(), GL_UNSIGNED_INT, 0);
+		glBindVertexArray(0);
+	}
+	m_pDepthEffect->deactiveEffect();
+	glBindFramebuffer(GL_FRAMEBUFFER, m_uiHDRFBO);
+	glViewport(0, 0, m_iSizeW, m_iSizeH);
+	glEnable(GL_CULL_FACE);
 }
 
 
