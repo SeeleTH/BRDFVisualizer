@@ -252,6 +252,8 @@ protected:
 	bool m_bIsLoadTexture;
 	GLuint m_iBRDFEstTex;
 	std::string m_sBRDFTextureName;
+	NPMathHelper::Vec3 m_v3ForcedTangent;
+	bool m_bIsForceTangent;
 
 	// Blinn-phong
 	unsigned int m_uiMaxSampling;

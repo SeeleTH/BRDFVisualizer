@@ -57,6 +57,8 @@ BRDFVisualizer::BRDFVisualizer(const char* name, const int sizeW, const int size
 	, m_uiNTH(16)
 	, m_bIsWireFrame(true)
 	, m_bIsSceneGUI(true)
+	, m_uiModelWindowWSize(1600)
+	, m_uiModelWindowHSize(900)
 {
 }
 
@@ -83,6 +85,10 @@ int BRDFVisualizer::OnInit()
 		" label='Wireframe' help='Show Wireframe' group='Display'"));
 	ATB_ASSERT(TwAddVarRW(mainBar, "scenegui", TW_TYPE_BOOLCPP, &m_bIsSceneGUI,
 		" label='Scene GUI' help='Show Scene GUI' group='Display'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Window Width", TW_TYPE_UINT32, &m_uiModelWindowWSize,
+		"step=1 keyIncr=s keyDecr=S help='N_PH' group='3D Model'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Window Height", TW_TYPE_UINT32, &m_uiModelWindowHSize,
+		"step=1 keyIncr=s keyDecr=S help='N_PH' group='3D Model'"));
 	ATB_ASSERT(TwAddButton(mainBar, "showmodelview", ModelButton, this, "label='Show View' group='3D Model'"));
 	ATB_ASSERT(TwAddSeparator(mainBar, "modelviewsep", ""));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='LClick+Drag: Rot Light dir'"));
@@ -282,7 +288,7 @@ void BRDFVisualizer::OpenModelWindow()
 {
 	if (!(m_uiModelWindowID > 0 && GetOwner() && GetOwner()->GetIsWindowActive(m_uiModelWindowID)))
 	{
-		m_uiModelWindowID = GetOwner()->AttachWindow(new ModelViewWindow("Model View", WINDOW_WIDTH, WINDOW_HEIGHT));
+		m_uiModelWindowID = GetOwner()->AttachWindow(new ModelViewWindow("Model View", m_uiModelWindowWSize, m_uiModelWindowHSize));
 	}
 
 	ModelViewWindow* modelViewWindow = (ModelViewWindow*)GetOwner()->GetWindow(m_uiModelWindowID);

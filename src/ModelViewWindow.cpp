@@ -373,6 +373,11 @@ int ModelViewWindow::OnInit()
 	ATB_ASSERT(TwAddVarRW(mainBar, "Model Specular Color", TW_TYPE_COLOR3F, &m_modelBlinnPhongMaterial.specular, " group='Material' "));
 	ATB_ASSERT(TwAddVarRW(mainBar, "Model Shininess", TW_TYPE_FLOAT, &m_modelBlinnPhongMaterial.shininess,
 		"group='Material' step=0.1"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Model Forced Tangent", TW_TYPE_DIR3F, &m_v3ForcedTangent,
+		"group='Material'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Enable Forced Tangent", TW_TYPE_BOOLCPP, &m_bIsForceTangent,
+		"group='Material'"));
+
 
 	std::string facename[] = {"Right", "Left", "Top", "Bottom", "Back", "Front"};
 	for (unsigned int i = 0; i < 6; i++)
@@ -555,9 +560,9 @@ int ModelViewWindow::OnInit()
 	m_dirLight.diffuse = NPMathHelper::Vec3(1.f, 1.f, 1.f);
 	m_dirLight.specular = NPMathHelper::Vec3(0.3f, 0.3f, 0.3f);
 
-	m_modelBlinnPhongMaterial.ambient = NPMathHelper::Vec3(0.1f, 0.1f, 0.1f);
+	m_modelBlinnPhongMaterial.ambient = NPMathHelper::Vec3(0.f, 0.f, 0.f);
 	m_modelBlinnPhongMaterial.diffuse = NPMathHelper::Vec3(1.f, 1.f, 1.f);
-	m_modelBlinnPhongMaterial.specular = NPMathHelper::Vec3(0.3f, 0.3f, 0.3f);
+	m_modelBlinnPhongMaterial.specular = NPMathHelper::Vec3(1.f, 1.f, 1.f);
 	m_modelBlinnPhongMaterial.shininess = 25.f;
 
 	NPGLHelper::loadTextureFromFile("..\\texture\\floor.png", m_iFloorTex, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR, false);
@@ -1210,6 +1215,11 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 		m_pBRDFModelEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
 		m_pBRDFModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
 
+		m_pBRDFModelEffect->SetVec3("material.ambient", m_modelBlinnPhongMaterial.ambient); CHECK_GL_ERROR;
+		m_pBRDFModelEffect->SetVec3("material.diffuse", m_modelBlinnPhongMaterial.diffuse); CHECK_GL_ERROR;
+		m_pBRDFModelEffect->SetVec3("material.specular", m_modelBlinnPhongMaterial.specular); CHECK_GL_ERROR;
+		m_pBRDFModelEffect->SetFloat("material.shininess", m_modelBlinnPhongMaterial.shininess); CHECK_GL_ERROR;
+
 		glm::vec3 lightDir;
 		lightDir.y = -sin(m_fInYaw);
 		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
@@ -1558,6 +1568,11 @@ void ModelViewWindow::RenderMethod_BRDFEnvMap()
 		m_pBRDFEnvModelEffect->SetMatrix("tranInvModel", tranInvModelMat.GetDataColumnMajor());
 		m_pBRDFEnvModelEffect->SetInt("init_samp", m_uiEnvInitSamp);
 		m_pBRDFEnvModelEffect->SetFloat("env_multiplier", m_fEnvMapMultiplier);
+
+		m_pBRDFEnvModelEffect->SetVec3("material.ambient", m_modelBlinnPhongMaterial.ambient); CHECK_GL_ERROR;
+		m_pBRDFEnvModelEffect->SetVec3("material.diffuse", m_modelBlinnPhongMaterial.diffuse); CHECK_GL_ERROR;
+		m_pBRDFEnvModelEffect->SetVec3("material.specular", m_modelBlinnPhongMaterial.specular); CHECK_GL_ERROR;
+		m_pBRDFEnvModelEffect->SetFloat("material.shininess", m_modelBlinnPhongMaterial.shininess); CHECK_GL_ERROR;
 
 		glm::vec3 lightDir;
 		lightDir.y = -sin(m_fInYaw);
@@ -2074,7 +2089,17 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapS()
 		m_pBRDFEnvSModelEffect->SetFloat("env_multiplier", m_fEnvMapMultiplier);
 		m_pBRDFEnvSModelEffect->SetInt("max_samp", m_uiEnvShadowMaxSamp);
 
+		m_pBRDFEnvSModelEffect->SetVec3("material.ambient", m_modelBlinnPhongMaterial.ambient); CHECK_GL_ERROR;
+		m_pBRDFEnvSModelEffect->SetVec3("material.diffuse", m_modelBlinnPhongMaterial.diffuse); CHECK_GL_ERROR;
+		m_pBRDFEnvSModelEffect->SetVec3("material.specular", m_modelBlinnPhongMaterial.specular); CHECK_GL_ERROR;
+		m_pBRDFEnvSModelEffect->SetFloat("material.shininess", m_modelBlinnPhongMaterial.shininess); CHECK_GL_ERROR;
+
 		m_pBRDFEnvSModelEffect->SetVec3("viewPos", m_Cam.GetPos());
+
+		if (m_bIsForceTangent)
+		{
+			m_pBRDFEnvSModelEffect->SetVec3("forced_tangent_w", m_v3ForcedTangent);
+		}
 
 		if (m_bIsLoadTexture)
 		{

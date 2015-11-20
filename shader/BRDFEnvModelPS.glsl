@@ -21,6 +21,15 @@ uniform vec3 viewPos;
 
 uniform samplerCube envmap;
 
+struct Material {
+	vec3 ambient;
+	vec3 diffuse;
+	vec3 specular;
+	float shininess;
+};
+
+uniform Material material;
+
 void GetVectorIndex(vec3 value, out float th, out float ph)
 {
 	value = normalize(value);
@@ -126,7 +135,10 @@ void main()
 		vec3 sampDirW = ttnb * sampDir;
 		vec3 brdf = SampleBRDF_Linear(sampDir, -viewDirL);
 		vec3 lightColor = env_multiplier * texture(envmap, sampDirW).rgb;
-		result += vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f);
+		result = vec4(lightColor, 1.0f) * (vec4(material.specular, 1.0f) * vec4(brdf, 1.0f)
+			+ vec4(material.diffuse, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f)
+			+ vec4(material.ambient, 1.0f));
+		//result += vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f);
 	}
 	result.a = float(ITR_COUNT) / (init_samp + float(ITR_COUNT));
 	color = result;

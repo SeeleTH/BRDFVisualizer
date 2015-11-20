@@ -16,14 +16,27 @@ uniform sampler2D texture_specular1;
 uniform sampler2D texture_shadow;
 
 uniform samplerCube envmap;
-
 uniform float env_multiplier;
+
+struct Material {
+	vec3 ambient;
+	vec3 diffuse;
+	vec3 specular;
+	float shininess;
+};
+
+uniform Material material;
+
 uniform int n_th;
 uniform int n_ph;
 uniform int max_samp;
 uniform int init_samp;
 uniform vec3 samp_dir_w;
+
+uniform vec3 forced_tangent_w;
+
 uniform vec3 viewPos;
+
 uniform float biasMin;
 uniform float biasMax;
 
@@ -130,6 +143,14 @@ void main()
 {
 	vec3 normal = normalize(outNormal);
 	vec3 tangent = normalize(outTangent.xyz - dot(normal, outTangent.xyz) * normal);
+	if (length(forced_tangent_w) > 0.1f)
+	{
+		vec3 temp_tangent = normalize(forced_tangent_w - dot(normal, forced_tangent_w) * normal);
+		if (length(temp_tangent) > 0.1f)
+		{
+			tangent = temp_tangent;
+		}
+	}
 	vec3 bitangent = normalize(cross(tangent, normal));
 	mat3 tnb = mat3(tangent, normal, bitangent);
 	mat3 ttnb = transpose(tnb);
@@ -144,7 +165,9 @@ void main()
 	{
 		vec3 brdf = clamp(SampleBRDF_Linear(sampDir, -viewDirL), vec3(0.f), vec3(1.0f));
 		vec3 lightColor = env_multiplier * texture(envmap, samp_dir_w).rgb;
-		result = 2.f * vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f);
+		result = 2.f * vec4(lightColor, 1.0f) * (vec4(material.specular, 1.0f) * vec4(brdf, 1.0f)
+			+ vec4(material.diffuse, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f)
+			+ vec4(material.ambient, 1.0f));
 
 		float shadowBias = max(biasMax * (1.0f - dot(normal, samp_dir_w)), biasMin);
 		float shadowFraction = shadowCalculation(outShadowPosW, shadowBias);

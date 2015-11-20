@@ -44,6 +44,8 @@ protected:
 	std::string m_sBRDFFilePath;
 	unsigned int m_uiNPH;
 	unsigned int m_uiNTH;
+	unsigned int m_uiModelWindowWSize;
+	unsigned int m_uiModelWindowHSize;
 
 	unsigned int m_uiModelWindowID;
 };

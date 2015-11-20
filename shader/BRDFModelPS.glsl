@@ -14,6 +14,15 @@ uniform sampler2D texture_diffuse1;
 uniform sampler2D texture_specular1;
 uniform sampler2D texture_shadow;
 
+struct Material {
+	vec3 ambient;
+	vec3 diffuse;
+	vec3 specular;
+	float shininess;
+};
+
+uniform Material material;
+
 uniform int n_th;
 uniform int n_ph;
 uniform vec3 lightDir;
@@ -135,7 +144,10 @@ void main()
 	vec3 brdf = SampleBRDF_Linear(-lightDirL, -viewDirL);
 	vec4 diff = texture(texture_diffuse1, outTexCoord);
 	//vec4 result = vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) + vec4(lightColor, 1.0f) * diff * clamp(dot(-lightDir, normal), 0.f, 1.f);
-	vec4 result = vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(-lightDir, normal), 0.f, 1.f);
+	//vec4 result = vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(-lightDir, normal), 0.f, 1.f);
+	vec4 result = vec4(lightColor, 1.0f) * (vec4(material.specular, 1.0f) * vec4(brdf, 1.0f)
+		+ vec4(material.diffuse, 1.0f) * diff * clamp(dot(-lightDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f)
+		+ vec4(material.ambient, 1.0f));
 	float shadowBias = max(biasMax * (1.0f - dot(normal, -lightDir)), biasMin);
 	float shadowFraction = shadowCalculation(outShadowPosW, shadowBias);
 	color = (1.f - shadowFraction) * result;
