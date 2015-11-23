@@ -38,8 +38,10 @@ namespace BRDFModel
 			float maxForward = glm::max(m_fRadius, other.m_fRadius + lenToOther);
 			float maxBackward = glm::max(m_fRadius, other.m_fRadius - lenToOther);
 			NPMathHelper::Vec3 toOtherDir = NPMathHelper::Vec3::normalize(toOther);
+			NPMathHelper::Vec3 forwPoint = m_v3Center + toOtherDir * maxForward;
+			NPMathHelper::Vec3 backPoint = m_v3Center - toOtherDir * maxBackward;
 			result.m_fRadius = (maxForward + maxBackward) * 0.5f;
-			result.m_v3Center = m_v3Center + toOtherDir * (maxForward - maxBackward * 0.5f);
+			result.m_v3Center = (forwPoint + backPoint) * 0.5f;
 			return result;
 		}
 
@@ -176,6 +178,15 @@ public:
 	};
 	RENDERINGMETHODS GetRenderingMethod() { return m_eRenderingMethod; }
 	void SetRenderingMethod(RENDERINGMETHODS method);
+
+
+	enum RECORD_STATUS
+	{
+		REC_NONE,
+		REC_PREVIEW,
+		REC_RECORDING
+	};
+	void SetRecording(const RECORD_STATUS status);
 
 protected:
 	void UpdateBRDFData();
@@ -345,6 +356,17 @@ protected:
 	GLuint m_iFloorTex;
 	GLuint m_iFloorNormalTex;
 	Material m_floorMaterial;
+	BRDFModel::SphericalSpace m_floorSpace;
+
+	//Recording
+	GLuint m_uiRECFBO;
+	GLuint m_uiRECCB;
+	GLuint m_uiRECDB;
+	RECORD_STATUS m_recStatus;
+	float m_fRecFPS;
+	float m_fRecCirSec;
+	float m_uiRecCurFrame;
+	std::string m_sRecStorePath;
 };
 
 #endif

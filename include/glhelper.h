@@ -55,6 +55,7 @@ namespace NPGLHelper
 	bool loadTextureFromFile(const char* path, GLuint &id, GLint warpS, GLint warpT, GLint minFil, GLint maxFil, bool sRGB = true);
 	bool loadCubemapFromFiles(std::string faces[6], GLuint &id, bool sRGB = true);
 
+	bool saveScreenShotBMP(const char* filename, const float width, const float height);
 
 	class RenderObject
 	{

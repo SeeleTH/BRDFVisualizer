@@ -5,8 +5,7 @@ namespace NPMathHelper
 	Vec3 Vec3::transform(const Mat4x4& mat4x4Left, const Vec3& v3Right, bool pos)
 	{
 		Vec4 v4Right = Vec4(v3Right, (float)pos);
-		Mat4x4 tLeft = Mat4x4::transpose(mat4x4Left);
-		Vec4 result = Vec4::transform(tLeft, v4Right);
+		Vec4 result = Vec4::transform(mat4x4Left, v4Right);
 		return Vec3(result._x, result._y, result._z);
 	}
 

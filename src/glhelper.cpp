@@ -142,6 +142,17 @@ namespace NPGLHelper
 		return true;
 	}
 
+
+	bool saveScreenShotBMP(const char* filename, const float width, const float height)
+	{
+		int save_result = SOIL_save_screenshot(filename, SOIL_SAVE_TYPE_BMP, 0, 0, width, height);
+		if (!save_result)
+		{
+			DEBUG_COUT(SOIL_last_result());
+		}
+		return save_result;
+	}
+
 	RenderObject::RenderObject()
 		: m_iVAO(-1)
 		, m_iVBO(-1)

@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <sstream>
 #include <SOIL.h>
 
 #include "geohelper.h"
@@ -231,6 +232,27 @@ void TW_CALL GetRenderingMethodCallback(void *value, void *clientData)
 	}
 }
 
+void TW_CALL RecordingPreviewButton(void* window)
+{
+	ModelViewWindow* appWin = (ModelViewWindow*)window;
+	if (appWin)
+		appWin->SetRecording(ModelViewWindow::REC_PREVIEW);
+}
+
+void TW_CALL RecordingStartButton(void* window)
+{
+	ModelViewWindow* appWin = (ModelViewWindow*)window;
+	if (appWin)
+		appWin->SetRecording(ModelViewWindow::REC_RECORDING);
+}
+
+void TW_CALL RecordingStopButton(void* window)
+{
+	ModelViewWindow* appWin = (ModelViewWindow*)window;
+	if (appWin)
+		appWin->SetRecording(ModelViewWindow::REC_NONE);
+}
+
 
 const unsigned int ModelViewWindow::SHADOW_WIDTH = 2048;
 const unsigned int ModelViewWindow::SHADOW_HEIGHT = 2048;
@@ -291,6 +313,11 @@ ModelViewWindow::ModelViewWindow(const char* name, const int sizeW, const int si
 	, m_fShadowBiasMin(0.005f)
 	, m_fShadowBiasMax(0.05f)
 	, m_uiEnvShadowMaxSamp(2048)
+	, m_recStatus(REC_NONE)
+	, m_fRecFPS(24)
+	, m_fRecCirSec(5.0f)
+	, m_uiRecCurFrame(0)
+	, m_sRecStorePath("Recorded\\seq")
 {
 }
 
@@ -403,6 +430,15 @@ int ModelViewWindow::OnInit()
 	ATB_ASSERT(TwAddButton(mainBar, "instruction1", NULL, NULL, "label='LClick+Drag: Rot Light dir'"));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction2", NULL, NULL, "label='RClick+Drag: Rot Camera dir'"));
 	ATB_ASSERT(TwAddButton(mainBar, "instruction3", NULL, NULL, "label='Scroll: Zoom Camera in/out'"));
+
+
+	ATB_ASSERT(TwAddButton(mainBar, "Preview", RecordingPreviewButton, this, " group='Recording'"));
+	ATB_ASSERT(TwAddButton(mainBar, "Start", RecordingStartButton, this, " group='Recording'"));
+	ATB_ASSERT(TwAddButton(mainBar, "Stop", RecordingStopButton, this, " group='Recording'"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Frame Per Sec", TW_TYPE_FLOAT, &m_fRecFPS, "group='Recording' step=1"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Circling Time", TW_TYPE_FLOAT, &m_fRecCirSec, "group='Recording' step=0.1"));
+	ATB_ASSERT(TwAddVarRW(mainBar, "Store Path", TW_TYPE_STDSTRING, &m_sRecStorePath, "group='Recording'"));
+
 	CHECK_GL_ERROR;
 	////////////////////
 	// ANT INIT - END //
@@ -555,6 +591,7 @@ int ModelViewWindow::OnInit()
 	//m_floorMaterial.diffuse = NPMathHelper::Vec3(1.f, 1.f, 1.f);
 	//m_floorMaterial.specular = NPMathHelper::Vec3(1.f, 1.f, 1.f);
 	m_floorMaterial.shininess = 50.f;
+	m_floorSpace.m_fRadius = 10.f;
 
 	m_dirLight.ambient = NPMathHelper::Vec3(0.1f, 0.1f, 0.1f);
 	m_dirLight.diffuse = NPMathHelper::Vec3(1.f, 1.f, 1.f);
@@ -581,6 +618,24 @@ int ModelViewWindow::OnInit()
 	glBindFramebuffer(GL_FRAMEBUFFER, m_uiHDRFBO);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_uiHDRCB, 0);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_uiHDRDB);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		DEBUG_COUT("[!!!]FRAMEBUFFER::CREATION_FAILED" << std::endl);
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	CHECK_GL_ERROR;
+	glGenFramebuffers(1, &m_uiRECFBO);
+	glGenTextures(1, &m_uiRECCB);
+	glBindTexture(GL_TEXTURE_2D, m_uiRECCB);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, m_iSizeW, m_iSizeH, 0, GL_RGB, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glGenRenderbuffers(1, &m_uiRECDB);
+	glBindRenderbuffer(GL_RENDERBUFFER, m_uiRECDB);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, m_iSizeW, m_iSizeH);
+	glBindFramebuffer(GL_FRAMEBUFFER, m_uiRECFBO);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_uiRECCB, 0);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_uiRECDB);
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 	{
 		DEBUG_COUT("[!!!]FRAMEBUFFER::CREATION_FAILED" << std::endl);
@@ -633,28 +688,32 @@ int ModelViewWindow::OnTick(const float deltaTime)
 {
 	// Camera control - bgn
 	glm::vec2 cursorMoved = m_v2CurrentCursorPos - m_v2LastCursorPos;
-	if (m_bIsCamRotate)
+	if (m_recStatus == REC_NONE)
 	{
-		m_Cam.AddPitch(-cursorMoved.x * m_fCamSenX);
-		m_Cam.AddYaw(cursorMoved.y * m_fCamSenY);
+		if (m_bIsCamRotate)
+		{
+			m_Cam.AddPitch(-cursorMoved.x * m_fCamSenX);
+			m_Cam.AddYaw(cursorMoved.y * m_fCamSenY);
+		}
+		if (m_bIsInRotate)
+		{
+			m_fInPitch = m_fInPitch + cursorMoved.x * m_fInSenX;
+			m_fInYaw = (m_fInYaw - cursorMoved.y * m_fInSenY);
+			if (m_fInYaw < 0) m_fInYaw = 0.f;
+			if (m_fInYaw > M_PI * 0.5f) m_fInYaw = M_PI * 0.5f;
+			while (m_fInPitch < 0) m_fInPitch = m_fInPitch + M_PI * 2.f;
+			while (m_fInPitch > M_PI * 2.f) m_fInPitch -= M_PI * 2.f;
+		}
+		if (abs(m_fScrollY) > M_EPSILON)
+		{
+			float curZoom = m_Cam.GetRadius();
+			curZoom += m_fScrollY * m_fZoomSen;
+			curZoom = (curZoom < m_fZoomMin) ? m_fZoomMin : (curZoom > m_fZoomMax) ? m_fZoomMax : curZoom;
+			m_Cam.SetRadius(curZoom);
+			m_fScrollY = 0.f;
+		}
 	}
-	if (m_bIsInRotate)
-	{
-		m_fInPitch = m_fInPitch + cursorMoved.x * m_fInSenX;
-		m_fInYaw = (m_fInYaw - cursorMoved.y * m_fInSenY);
-		if (m_fInYaw < 0) m_fInYaw = 0.f;
-		if (m_fInYaw > M_PI * 0.5f) m_fInYaw = M_PI * 0.5f;
-		while (m_fInPitch < 0) m_fInPitch = m_fInPitch + M_PI * 2.f;
-		while (m_fInPitch > M_PI * 2.f) m_fInPitch -= M_PI * 2.f;
-	}
-	if (abs(m_fScrollY) > M_EPSILON)
-	{
-		float curZoom = m_Cam.GetRadius();
-		curZoom += m_fScrollY * m_fZoomSen;
-		curZoom = (curZoom < m_fZoomMin) ? m_fZoomMin : (curZoom > m_fZoomMax) ? m_fZoomMax : curZoom;
-		m_Cam.SetRadius(curZoom);
-		m_fScrollY = 0.f;
-	}
+
 	m_v2LastCursorPos = m_v2CurrentCursorPos;
 	// Camera control - end
 
@@ -690,6 +749,76 @@ int ModelViewWindow::OnTick(const float deltaTime)
 		RenderMethod_BlinnPhongEnvMapS();
 		break;
 	}
+
+	// Recording - BGN
+	if (m_recStatus != REC_NONE)
+	{
+		bool isRenderingCompleted = (m_fRenderingProgress >= 100.f 
+			|| m_eRenderingMethod == RENDERINGMETHOD_DIFFUSEDIRLIGHT
+			|| m_eRenderingMethod == RENDERINGMETHOD_BLINNPHONGDIRLIGHT
+			|| m_eRenderingMethod == RENDERINGMETHOD_BRDFDIRLIGHT
+			|| m_recStatus == REC_PREVIEW);
+
+		if (isRenderingCompleted)
+		{
+			if (m_recStatus == REC_RECORDING)
+			{
+
+				glBindFramebuffer(GL_FRAMEBUFFER, m_uiRECFBO);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+				m_pFinalComposeEffect->activeEffect();
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, m_uiHDRCB);
+				m_pFinalComposeEffect->SetInt("hdrBuffer", 0);
+				m_pFinalComposeEffect->SetFloat("exposure", m_fExposure);
+				RenderScreenQuad();
+				glBindTexture(GL_TEXTURE_2D, 0);
+				m_pFinalComposeEffect->deactiveEffect();
+
+				float nextFrameTime = 1.f / m_fRecFPS;
+				m_Cam.AddPitch(2.f * M_PI * nextFrameTime / m_fRecCirSec);
+				std::stringstream storedPathSS;
+				std::stringstream maxNumFrameSS;
+				std::string maxNumFrameS;
+				std::stringstream curNumFrameSS;
+				std::string curNumFrameS;
+
+				int maxFrame = m_fRecCirSec * m_fRecFPS;
+				maxNumFrameSS << maxFrame;
+				maxNumFrameSS >> maxNumFrameS;
+				int maxDigit = maxNumFrameS.length();
+				curNumFrameSS << m_uiRecCurFrame;
+				curNumFrameSS >> curNumFrameS;
+				int curDigit = curNumFrameS.length();
+				storedPathSS << m_sRecStorePath;
+				for (int i = curDigit; i != maxDigit; i++)
+				{
+					storedPathSS << "0";
+				}
+				storedPathSS << m_uiRecCurFrame << ".bmp";
+				std::string storedPathS;
+				storedPathSS >> storedPathS;
+
+				NPGLHelper::saveScreenShotBMP(storedPathS.c_str(), m_iSizeW, m_iSizeH);
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			}
+			else
+			{
+				m_Cam.AddPitch(2.f * M_PI * deltaTime / m_fRecCirSec);
+			}
+
+			float completion = ((float)m_uiRecCurFrame + 1.f) / (m_fRecCirSec * m_fRecFPS);
+			if (completion >= 1)
+			{
+				SetRecording(REC_NONE);
+			}
+			else
+			{
+				m_uiRecCurFrame = (m_recStatus == REC_RECORDING) ? m_uiRecCurFrame + 1 : m_uiRecCurFrame + (deltaTime * m_fRecFPS);
+			}
+		}
+	}
+	// Recording - END
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -899,6 +1028,21 @@ void ModelViewWindow::SetRenderingMethod(RENDERINGMETHODS method)
 		RenderMethod_BRDFEnvMapSInit();
 		break;
 	}
+}
+
+void ModelViewWindow::SetRecording(const RECORD_STATUS status)
+{
+	switch (m_recStatus)
+	{
+	case REC_NONE:
+		break;
+	case REC_PREVIEW:
+		break;
+	case REC_RECORDING:
+		break;
+	}
+	m_uiRecCurFrame = 0;
+	m_recStatus = status;
 }
 
 void ModelViewWindow::UpdateBRDFData()
@@ -1224,6 +1368,11 @@ void ModelViewWindow::RenderMethod_BRDFDirLight()
 		lightDir.y = -sin(m_fInYaw);
 		lightDir.x = -cos(m_fInYaw) * sin(m_fInPitch);
 		lightDir.z = -cos(m_fInYaw) * cos(m_fInPitch);
+
+		if (m_bIsForceTangent)
+		{
+			m_pBRDFModelEffect->SetVec3("forced_tangent_w", m_v3ForcedTangent);
+		}
 
 		m_pBRDFModelEffect->SetVec3("lightDir", lightDir.x, lightDir.y, lightDir.z);
 		m_pBRDFModelEffect->SetVec3("lightColor", m_v3LightColor.x * m_fLightIntMultiplier
@@ -1761,10 +1910,10 @@ void ModelViewWindow::RenderMethod_DiffuseEnvMapS()
 		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
 		m_pDiffuseEnvSModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
 
-		m_pDiffuseEnvSModelEffect->SetVec3("material.ambient", m_floorMaterial.ambient);
-		m_pDiffuseEnvSModelEffect->SetVec3("material.diffuse", m_floorMaterial.diffuse);
-		m_pDiffuseEnvSModelEffect->SetVec3("material.specular", m_floorMaterial.specular);
-		m_pDiffuseEnvSModelEffect->SetFloat("material.shininess", m_floorMaterial.shininess);
+		m_pDiffuseEnvSModelEffect->SetVec3("material.ambient", m_modelBlinnPhongMaterial.ambient);
+		m_pDiffuseEnvSModelEffect->SetVec3("material.diffuse", m_modelBlinnPhongMaterial.diffuse);
+		m_pDiffuseEnvSModelEffect->SetVec3("material.specular", m_modelBlinnPhongMaterial.specular);
+		m_pDiffuseEnvSModelEffect->SetFloat("material.shininess", m_modelBlinnPhongMaterial.shininess);
 		m_pDiffuseEnvSModelEffect->SetVec3("samp_dir_w", sampDir);
 		m_pModel->Draw(*m_pDiffuseEnvSModelEffect);
 		m_uiEnvInitSamp += ITR_COUNT;
@@ -1933,10 +2082,10 @@ void ModelViewWindow::RenderMethod_BlinnPhongEnvMapS()
 		glBindTexture(GL_TEXTURE_2D, m_uiDepthMapTex); CHECK_GL_ERROR;
 		m_pBlinnPhongEnvSModelEffect->SetInt("texture_shadow", 5); CHECK_GL_ERROR;
 
-		m_pBlinnPhongEnvSModelEffect->SetVec3("material.ambient", m_floorMaterial.ambient);
-		m_pBlinnPhongEnvSModelEffect->SetVec3("material.diffuse", m_floorMaterial.diffuse);
-		m_pBlinnPhongEnvSModelEffect->SetVec3("material.specular", m_floorMaterial.specular);
-		m_pBlinnPhongEnvSModelEffect->SetFloat("material.shininess", m_floorMaterial.shininess);
+		m_pBlinnPhongEnvSModelEffect->SetVec3("material.ambient", m_modelBlinnPhongMaterial.ambient);
+		m_pBlinnPhongEnvSModelEffect->SetVec3("material.diffuse", m_modelBlinnPhongMaterial.diffuse);
+		m_pBlinnPhongEnvSModelEffect->SetVec3("material.specular", m_modelBlinnPhongMaterial.specular);
+		m_pBlinnPhongEnvSModelEffect->SetFloat("material.shininess", m_modelBlinnPhongMaterial.shininess);
 		m_pBlinnPhongEnvSModelEffect->SetVec3("samp_dir_w", sampDir);
 		m_pModel->Draw(*m_pBlinnPhongEnvSModelEffect);
 		m_uiEnvInitSamp += ITR_COUNT;
@@ -2268,9 +2417,18 @@ void ModelViewWindow::RenderMethod_BRDFEnvMapSQuit()
 
 void ModelViewWindow::Render_ShadowMap(const NPMathHelper::Vec3 lightDir)
 {
+	NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
+		, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
+		, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
+
 	BRDFModel::SphericalSpace space = m_pModel->GetSphericalSpace();
+	space.m_v3Center = NPMathHelper::Vec3::transform(modelMat, space.m_v3Center, true);
+	space.m_fRadius = m_fModelScale * space.m_fRadius;
+	space = space.Merge(m_floorSpace);
+
 	NPMathHelper::Mat4x4 lightProj = NPMathHelper::Mat4x4::orthogonalProjection(2.0f*space.m_fRadius, 2.0f*space.m_fRadius, 1.f, 2.f*space.m_fRadius);
-	NPMathHelper::Mat4x4 lightView = NPMathHelper::Mat4x4::lookAt(space.m_v3Center - lightDir * space.m_fRadius, space.m_v3Center, NPMathHelper::Vec3(0.f, 1.f, 0.f));
+	NPMathHelper::Mat4x4 lightView = NPMathHelper::Mat4x4::lookAt(space.m_v3Center - lightDir * (space.m_fRadius + 1.5f)
+		, space.m_v3Center, NPMathHelper::Vec3(0.f, 1.f, 0.f));
 	m_matShadowMapMat = NPMathHelper::Mat4x4::mul(lightProj, lightView);
 
 	glDisable(GL_CULL_FACE);
@@ -2280,9 +2438,6 @@ void ModelViewWindow::Render_ShadowMap(const NPMathHelper::Vec3 lightDir)
 	glClear(GL_DEPTH_BUFFER_BIT);
 	m_pDepthEffect->activeEffect();
 	m_pDepthEffect->SetMatrix("lightMat", m_matShadowMapMat.GetDataColumnMajor());
-	NPMathHelper::Mat4x4 modelMat = NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::translation(m_v3ModelPos)
-		, NPMathHelper::Mat4x4::mul(NPMathHelper::Mat4x4::rotationTransform(m_v3ModelRot)
-		, NPMathHelper::Mat4x4::scaleTransform(m_fModelScale, m_fModelScale, m_fModelScale)));
 	m_pDepthEffect->SetMatrix("model", modelMat.GetDataColumnMajor());
 	m_pModel->Draw(*m_pDepthEffect);
 	if (m_bIsShowFloor)

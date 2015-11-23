@@ -29,6 +29,8 @@ uniform vec3 lightDir;
 uniform vec3 lightColor;
 uniform vec3 viewPos;
 
+uniform vec3 forced_tangent_w;
+
 uniform float biasMin;
 uniform float biasMax;
 
@@ -135,6 +137,14 @@ void main()
 {
 	vec3 normal = normalize(outNormal);
 	vec3 tangent = normalize(outTangent.xyz - dot(normal, outTangent.xyz) * normal);
+	if (length(forced_tangent_w) > 0.1f)
+	{
+		vec3 temp_tangent = normalize(forced_tangent_w - dot(normal, forced_tangent_w) * normal);
+		if (length(temp_tangent) > 0.1f)
+		{
+			tangent = temp_tangent;
+		}
+	}
 	vec3 bitangent = normalize(cross(tangent, normal));
 	mat3 tbn = transpose(mat3(tangent, normal, bitangent));
 	vec3 viewDir = normalize(outPosW - viewPos);
