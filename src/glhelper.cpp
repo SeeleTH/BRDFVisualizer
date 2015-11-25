@@ -8,6 +8,8 @@
 
 #include <SOIL.h>
 
+#include "hdrhelper.h"
+
 GLEWContext* glewGetContext()
 {
 	if (NPGLHelper::App::g_pMainApp)
@@ -86,6 +88,28 @@ namespace NPGLHelper
 			info = infoLog;
 		}
 		return success != 0;
+	}
+
+	bool loadHDRTextureFromFile(const char* path, GLuint &id, GLint warpS, GLint warpT, GLint minFil, GLint maxFil)
+	{
+		int width, height;
+		FILE* f;
+		fopen_s(&f, path, "rb");
+		NPHDRHelper::RGBE_ReadHeader(f, &width, &height, NULL);
+		float *image = (float *)malloc(sizeof(float) * 3 * width*height);
+		NPHDRHelper::RGBE_ReadPixels_RLE(f, image, width, height);
+		fclose(f);
+
+		glGenTextures(1, &id);
+		glBindTexture(GL_TEXTURE_2D, id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, 0, GL_RGB, GL_FLOAT, image);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		return true;
 	}
 
 	bool loadTextureFromFile(const char* path, GLuint &id, GLint warpS, GLint warpT, GLint minFil, GLint maxFil, bool sRGB)

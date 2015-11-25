@@ -92,7 +92,7 @@ vec3 FetchBRDF(int i_th, int i_ph, int o_th, int o_ph)
 {
 	ivec2 fTarget;
 	fTarget.x = i_th * n_ph + i_ph;
-	fTarget.y = (n_ph * n_th - 1) - (o_th * n_ph + o_ph);
+	fTarget.y = o_th * n_ph + o_ph;
 	return texelFetch(texture_brdf, fTarget, 0).xyz;
 }
 
@@ -155,9 +155,9 @@ void main()
 	vec4 diff = texture(texture_diffuse1, outTexCoord);
 	//vec4 result = vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) + vec4(lightColor, 1.0f) * diff * clamp(dot(-lightDir, normal), 0.f, 1.f);
 	//vec4 result = vec4(lightColor, 1.0f) * vec4(brdf, 1.0f) * diff * clamp(dot(-lightDir, normal), 0.f, 1.f);
-	vec4 result = vec4(lightColor, 1.0f) * (vec4(material.specular, 1.0f) * vec4(brdf, 1.0f)
-		+ vec4(material.diffuse, 1.0f) * diff * clamp(dot(-lightDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f)
-		+ vec4(material.ambient, 1.0f));
+	vec4 result = vec4(lightColor, 1.0f) * clamp(dot(-lightDirL, vec3(0.f, 1.f, 0.f)), 0.f, 1.f) * (vec4(material.specular, 1.0f) * vec4(brdf, 1.0f)
+		+ vec4(material.diffuse, 1.0f) * diff
+		) + vec4(material.ambient, 1.0f);
 	float shadowBias = max(biasMax * (1.0f - dot(normal, -lightDir)), biasMin);
 	float shadowFraction = shadowCalculation(outShadowPosW, shadowBias);
 	color = (1.f - shadowFraction) * result;

@@ -98,7 +98,7 @@ vec3 FetchBRDF(int i_th, int i_ph, int o_th, int o_ph)
 {
 	ivec2 fTarget;
 	fTarget.x = i_th * n_ph + i_ph;
-	fTarget.y = (n_ph * n_th - 1) - (o_th * n_ph + o_ph);
+	fTarget.y = o_th * n_ph + o_ph;
 	return texelFetch(texture_brdf, fTarget, 0).xyz;
 }
 
@@ -165,9 +165,9 @@ void main()
 	{
 		vec3 brdf = clamp(SampleBRDF_Linear(sampDir, -viewDirL), vec3(0.f), vec3(1.0f));
 		vec3 lightColor = env_multiplier * texture(envmap, samp_dir_w).rgb;
-		result = 2.f * vec4(lightColor, 1.0f) * (vec4(material.specular, 1.0f) * vec4(brdf, 1.0f)
-			+ vec4(material.diffuse, 1.0f) * diff * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f)
-			+ vec4(material.ambient, 1.0f));
+		result = 2.f * vec4(lightColor, 1.0f) * clamp(dot(sampDir, vec3(0.f, 1.f, 0.f)), 0.f, 1.f) * (vec4(material.specular, 1.0f) * vec4(brdf, 1.0f)
+			+ vec4(material.diffuse, 1.0f) * diff )
+			+ vec4(material.ambient, 1.0f);
 
 		float shadowBias = max(biasMax * (1.0f - dot(normal, samp_dir_w)), biasMin);
 		float shadowFraction = shadowCalculation(outShadowPosW, shadowBias);

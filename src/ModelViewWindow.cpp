@@ -1064,7 +1064,8 @@ void ModelViewWindow::UpdateBRDFData()
 		}
 
 		int width, height;
-		if (!NPGLHelper::loadTextureFromFile(m_sNewBRDFPath.c_str(), m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST, false))
+		//if (!NPGLHelper::loadTextureFromFile(m_sNewBRDFPath.c_str(), m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST, false))
+		if (!NPGLHelper::loadHDRTextureFromFile(m_sNewBRDFPath.c_str(), m_iBRDFEstTex, GL_REPEAT, GL_REPEAT, GL_NEAREST, GL_NEAREST))
 		{
 			std::string message = "Cannot load file ";
 			message = message + m_sNewBRDFPath;

@@ -57,7 +57,7 @@ vec3 FetchBRDF(int i_th, int i_ph, int o_th, int o_ph)
 	o_th = o_th % n_th;
 	ivec2 fTarget;
 	fTarget.x = i_th * n_ph + i_ph;
-	fTarget.y = (n_ph * n_th - 1) -( o_th * n_ph + o_ph);
+	fTarget.y = o_th * n_ph + o_ph;
 	return texelFetch(brdfTexture, fTarget, 0).xyz;
 }
 
@@ -121,7 +121,7 @@ void main()
 	vec3 newposition = normalize(position) * (result.x + result.y + result.z) / 3.f;
 	gl_Position = projection * view * model * vec4(newposition, 1.0);
 	outTexCoord = texCoord;
-	outColor = result;
+	outColor = vec3(1.0f);//result;
 
 	// debug
 	//float th, ph;

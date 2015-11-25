@@ -135,6 +135,7 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
     <ClCompile Include="..\src\brdfvisualizer.cpp" />
     <ClCompile Include="..\src\geohelper.cpp" />
     <ClCompile Include="..\src\glhelper.cpp" />
+    <ClCompile Include="..\src\hdrhelper.cpp" />
     <ClCompile Include="..\src\mathelper.cpp" />
     <ClCompile Include="..\src\ModelViewWindow.cpp" />
     <ClCompile Include="..\src\oshelper.cpp" />
@@ -145,6 +146,7 @@ copy /Y "$(SolutionDir)3rdParty\anttweakbar\lib\$(Configuration)\$(Platform)\Ant
     <ClInclude Include="..\include\camhelper.h" />
     <ClInclude Include="..\include\geohelper.h" />
     <ClInclude Include="..\include\glhelper.h" />
+    <ClInclude Include="..\include\hdrhelper.h" />
     <ClInclude Include="..\include\macrohelper.h" />
     <ClInclude Include="..\include\mathhelper.h" />
     <ClInclude Include="..\include\ModelViewWindow.h" />
