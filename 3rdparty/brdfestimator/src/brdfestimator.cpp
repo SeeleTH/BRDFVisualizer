@@ -163,7 +163,7 @@ float BRDFEstimator::calculate_projected_area( const int N, const vec3& wo )
  * @fn col3 BRDFEstimator::calculate_throughput( const Ray& ray, const DirectionalLight& light )
  * @brief calculate throughput of a single ray illuminated by light
  */
-col3 BRDFEstimator::calculate_throughput( const Ray& primary_ray, const DirectionalLight& light, bool& hit )
+col3 BRDFEstimator::calculate_throughput(const Ray& primary_ray, const DirectionalLight& light, bool& hit, const Material* mat)
 {
     Ray ray = primary_ray;
     Isect isect;
@@ -191,14 +191,19 @@ col3 BRDFEstimator::calculate_throughput( const Ray& primary_ray, const Directio
         if( path_length >= Config::max_path_length ) return col;
 
         vec3 hitpoint = ray.o + isect.dist_ * ray.d;
-        BRDF brdf( ray, isect, scene_ );
+		std::unique_ptr<BRDF> brdf;
+		if (mat)
+			brdf.reset(new BRDF(ray, isect, *mat));
+		else
+			brdf.reset(new BRDF(ray, isect, scene_));
+        //BRDF brdf( ray, isect, scene_ );
     
         //next event estimation
         vec3 wi;
         col3 L, C, fr;
         float pdf, cosine, brdfpdf;
         L = light.illuminate( rng_.getFloat(), rng_.getFloat(), wi, pdf );
-        fr = brdf.evaluate( wi, cosine, &brdfpdf );
+        fr = brdf->evaluate( wi, cosine, &brdfpdf );
         if( !is_black_or_negative( L ) && !is_black_or_negative( fr ) ) {
             C = path_weight * L * fr * cosine / pdf;
             Ray shadowray;
@@ -214,7 +219,7 @@ col3 BRDFEstimator::calculate_throughput( const Ray& primary_ray, const Directio
         //continue random walk
         {
             const vec3 rnd3( rng_.getFloat(), rng_.getFloat(), rng_.getFloat() );
-            fr = brdf.sample( rnd3, ray.d, pdf, cosine );
+			fr = brdf->sample(rnd3, ray.d, pdf, cosine);
             if( is_black_or_negative( fr ) ) return col;
             path_weight *= ( fr * cosine / pdf );
             ray.o = hitpoint;
@@ -227,7 +232,7 @@ col3 BRDFEstimator::calculate_throughput( const Ray& primary_ray, const Directio
  * @fn void BRDFEstimator::estimate( const int nsample )
  * @brief 
  */
-void BRDFEstimator::estimate( const int nsample )
+void BRDFEstimator::estimate(const int nsample, const Material* mat)
 {
     const int size = nth_ * nph_;
 	bool isEnegyConserv = true;
@@ -292,7 +297,7 @@ void BRDFEstimator::estimate( const int nsample )
 				primary.o = center_ + radius_ * disk.x * frame.tangent() + radius_ * disk.y * frame.binormal() + radius_ * wo;
 				primary.d = -wo;
 				bool hit = false;
-				const col3 col = calculate_throughput(primary, light, hit);
+				const col3 col = calculate_throughput(primary, light, hit, mat);
 				if (hit) {
 					fr += col;
 					N++;

@@ -100,7 +100,7 @@ public:
     //estimate projected area of micro-geometry towards wo using monte carlo integration
     float calculate_projected_area( const int nsample, const vec3& wo );
 
-    void estimate( const int N = 1024 );
+    void estimate( const int N = 1024, const Material* mat = NULL );
 
     void visualize( const EnvMap& map, const char* filename ) const;
 
@@ -131,7 +131,7 @@ private:
     void init_boundary_sphere( void );
     
     //calculate throughput (energy) using path tracing
-    col3 calculate_throughput( const Ray& ray, const DirectionalLight& light, bool& hit );
+	col3 calculate_throughput(const Ray& ray, const DirectionalLight& light, bool& hit, const Material* mat = NULL);
 
     void calculate_omega( void );
 

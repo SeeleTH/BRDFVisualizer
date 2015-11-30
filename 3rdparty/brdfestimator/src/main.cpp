@@ -1,5 +1,55 @@
 #include "main.h"
 
+struct BatchConfig
+{
+	struct BatchData
+	{
+		Material mat;
+		std::string outputFilename;
+	};
+
+	bool load(const char* filename)
+	{
+		std::ifstream input(filename, std::ios::in);
+		std::string param;
+
+		if (!input.is_open()) {
+			std::cout << "Cannot open file " << filename << "\n";
+			return false;
+		}
+
+		while (input >> param) {
+			if (param == std::string("batch")) {
+				data.push_back(BatchData());
+				input >> data[data.size()-1].outputFilename;
+				std::cout << "Batch name: " << data[data.size() - 1].outputFilename << "\n";
+			}
+			if (data.size() <= 0)
+			{
+				continue;
+			}
+			if (param == std::string("kd")) {
+				input >> data[data.size() - 1].mat.diffuse.r;
+				input >> data[data.size() - 1].mat.diffuse.g;
+				input >> data[data.size() - 1].mat.diffuse.b;
+				std::cout << "kd: " << data[data.size() - 1].mat.diffuse << "\n";
+			}
+			if (param == std::string("ks")) {
+				input >> data[data.size() - 1].mat.glossy.r;
+				input >> data[data.size() - 1].mat.glossy.g;
+				input >> data[data.size() - 1].mat.glossy.b;
+				std::cout << "ks: " << data[data.size() - 1].mat.glossy << "\n";
+			}
+			if (param == std::string("ns")) {
+				input >> data[data.size() - 1].mat.glossy.a;
+				std::cout << "ns: " << data[data.size() - 1].mat.glossy.a << "\n";
+			}
+		}
+		return (data.size() > 0);
+	}
+
+	std::vector<BatchData> data;
+};
 
 void init( void )
 {
@@ -40,10 +90,18 @@ void init_distribution( void )
 
 void initBRDFEstimator( void )
 {
-	estimator.reset( new BRDFEstimator( Config::nth, Config::nph, *scene ) );
-    estimator->estimate( 10000 );
-	estimator->write_result("output_result.bmp");
-    estimator->visualize( *( scene->background_->envmap() ), "sphere.bmp" );
+	BatchConfig batch;
+	if (batch.load("config_batch.txt"))
+	{
+
+	}
+	else
+	{
+		estimator.reset(new BRDFEstimator(Config::nth, Config::nph, *scene));
+		estimator->estimate(10000);
+		estimator->write_result("output_result.bmp");
+		estimator->visualize(*(scene->background_->envmap()), "sphere.bmp");
+	}
 }
 
 void initScene( void )

@@ -36,6 +36,17 @@ public:
 	}
 
 	/**
+	 * @brief initialize function with overrided material
+	 */
+	BRDF(const Ray& ray, const Isect& isect, const Material& mat)
+	{
+		mat_ = mat;
+		frame_.set(isect.shadingnormal_);
+		local_ = frame_.toLocal(-ray.d);
+		getComponentProbability(mat_);
+	}
+
+	/**
 	 * @fn void init( const Ray& ray, const Isect& isect, const Scene& scene )
 	 * @brief initialize function 
 	 */
