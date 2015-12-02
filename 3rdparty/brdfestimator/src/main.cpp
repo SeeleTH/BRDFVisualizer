@@ -18,37 +18,79 @@ struct BatchConfig
 			return false;
 		}
 
-		while (input >> param) {
-			if (param == std::string("batch")) {
-				data.push_back(BatchData());
-				input >> data[data.size()-1].outputFilename;
-				std::cout << "Batch name: " << data[data.size() - 1].outputFilename << "\n";
-			}
-			if (data.size() <= 0)
-			{
-				continue;
-			}
-			if (param == std::string("kd")) {
-				input >> data[data.size() - 1].mat.diffuse.r;
-				input >> data[data.size() - 1].mat.diffuse.g;
-				input >> data[data.size() - 1].mat.diffuse.b;
-				std::cout << "kd: " << data[data.size() - 1].mat.diffuse << "\n";
-			}
-			if (param == std::string("ks")) {
-				input >> data[data.size() - 1].mat.glossy.r;
-				input >> data[data.size() - 1].mat.glossy.g;
-				input >> data[data.size() - 1].mat.glossy.b;
-				std::cout << "ks: " << data[data.size() - 1].mat.glossy << "\n";
-			}
-			if (param == std::string("ns")) {
-				input >> data[data.size() - 1].mat.glossy.a;
-				std::cout << "ns: " << data[data.size() - 1].mat.glossy.a << "\n";
+		isCommented = false;
+
+		std::string line;
+		while (std::getline(input, line))
+		{
+			std::stringstream lineS(line);
+			isLineCommented = false;
+
+			while (lineS >> param) {
+				if (checkComment(param))
+				{
+					continue;
+				}
+
+				if (param == std::string("batch")) {
+					data.push_back(BatchData());
+					lineS >> data[data.size() - 1].outputFilename;
+					std::cout << "Batch name: " << data[data.size() - 1].outputFilename << "\n";
+				}
+				if (data.size() <= 0)
+				{
+					continue;
+				}
+				if (param == std::string("kd")) {
+					lineS >> data[data.size() - 1].mat.diffuse.r;
+					lineS >> data[data.size() - 1].mat.diffuse.g;
+					lineS >> data[data.size() - 1].mat.diffuse.b;
+					std::cout << "kd: " << data[data.size() - 1].mat.diffuse << "\n";
+				}
+				if (param == std::string("ks")) {
+					lineS >> data[data.size() - 1].mat.glossy.r;
+					lineS >> data[data.size() - 1].mat.glossy.g;
+					lineS >> data[data.size() - 1].mat.glossy.b;
+					std::cout << "ks: " << data[data.size() - 1].mat.glossy << "\n";
+				}
+				if (param == std::string("ns")) {
+					lineS >> data[data.size() - 1].mat.glossy.a;
+					std::cout << "ns: " << data[data.size() - 1].mat.glossy.a << "\n";
+				}
 			}
 		}
 		return (data.size() > 0);
 	}
 
 	std::vector<BatchData> data;
+
+private:
+	bool checkComment(std::string param)
+	{
+		if (!isCommented && !isLineCommented)
+		{
+			if (param == std::string("//"))
+			{
+				isLineCommented = true;
+			}
+			if (param == std::string("/*"))
+			{
+				isCommented = true;
+			}
+		}
+		else if (!isLineCommented)
+		{
+			if (param == std::string("*/"))
+			{
+				isCommented = false;
+			}
+		}
+
+		return isCommented || isLineCommented;
+	}
+
+	bool isCommented;
+	bool isLineCommented;
 };
 
 void init( void )
@@ -90,16 +132,26 @@ void init_distribution( void )
 
 void initBRDFEstimator( void )
 {
-	BatchConfig batch;
-	if (batch.load("config_batch.txt"))
+	BatchConfig batchCfg;
+	if (batchCfg.load("config_batch.txt"))
 	{
-
+		for (auto& batch : batchCfg.data)
+		{
+			std::cout << "Start Batch " << batch.outputFilename << std::endl;
+			std::string outputpath = batch.outputFilename + ".hdr";
+			estimator.reset(new BRDFEstimator(Config::nth, Config::nph, *scene));
+			estimator->estimate(10000, &batch.mat);
+			estimator->write_result(outputpath.c_str());
+			//estimator->visualize(*(scene->background_->envmap()), "sphere.bmp");
+			std::cout << "Finish Batch " << batch.outputFilename << std::endl;
+		}
+		std::cout << "All batching finished" << std::endl;
 	}
 	else
 	{
 		estimator.reset(new BRDFEstimator(Config::nth, Config::nph, *scene));
 		estimator->estimate(10000);
-		estimator->write_result("output_result.bmp");
+		estimator->write_result("output_result.hdr");
 		estimator->visualize(*(scene->background_->envmap()), "sphere.bmp");
 	}
 }

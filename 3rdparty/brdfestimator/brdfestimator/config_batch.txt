@@ -1,33 +1,16 @@
-scene_object_path						..\\obj\\
-//scene_object_filename					plane.obj
-scene_object_filename					carrot_gf_000.obj
-camera									0.000 0.000  100.000
-										0.000 0.000  0.00000 
-										40
-
-nsample									1000
-max_path_length							10
-outputfilename							buddha_10.bmp
-envmap_filename							..\\img\\room_100x050.hdr
-envmap_scale							3
-
-nth										16
-nph										64
-
-
 /*
-scene_object_path						..\\obj\\
-scene_object_filename					cryteksponza000.obj
-camera									0.000 20.000  30.0000
-										0.000 20.000 -30.000 
-										40
-nsample									100
+batch d2s8n32
+kd 0.2 0.2 0.2
+ks 0.8 0.8 0.8
+ns 32.0
 */
-/*
-scene_object_path						..\\obj\\
-scene_object_filename					dabrovicsponza.obj
-camera									 11.3689 3.85203 -0.535991
-										-87.1487 21.002  -0.944359
-										40
-*/
+batch d0s1n32
+kd 0.0 0.0 0.0
+ks 1.0 1.0 1.0
+ns 32.0
 
+batch d1s0n32
+kd 1.0 1.0 1.0
+ks 0.0 0.0 0.0
+ns 32.0
+/**/

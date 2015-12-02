@@ -1,5 +1,7 @@
 #include "brdfestimator.h"
 
+#include <Windows.h>
+
 
 /**
  * @fn void BRDFEstimator::init( void )
@@ -236,6 +238,7 @@ void BRDFEstimator::estimate(const int nsample, const Material* mat)
 {
     const int size = nth_ * nph_;
 	bool isEnegyConserv = true;
+	float startTime = (float)GetTickCount()/1000.f;
 
     //omega_i 
 	for (int i = 0; i < size; i++) {
@@ -320,6 +323,8 @@ void BRDFEstimator::estimate(const int nsample, const Material* mat)
 		{
 			std::cout << "[" << i << "/" << size << "]" << "Energy Conservation OK with" << eneCheck << std::endl;
 		}
+		float estRemTime = ((float)GetTickCount()/1000.f - startTime) / (i + 1) * (size - (i + 1));
+		std::cout << "Estimate Remaining Time :" << (int)(estRemTime / 60.f / 60.f) << "Hrs" << (int)(estRemTime / 60.f) % 60 << "Mins" << (int)estRemTime % 60 << "Secs" << std::endl;
     }
 	if (!isEnegyConserv)
 	{

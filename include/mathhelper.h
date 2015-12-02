@@ -56,6 +56,21 @@ namespace NPMathHelper
 
 		inline static Vec2 normalize(const Vec2& v2Left);
 
+		inline float dot(const Vec2& other)
+		{
+			return dot(*this, other);
+		}
+
+		inline float length()
+		{
+			return length(*this);
+		}
+
+		inline Vec2 normalize()
+		{
+			return normalize(*this);
+		}
+
 		inline const bool operator == (const Vec2& v2Other) const
 		{
 			return (_x == v2Other._x && _y == v2Other._y);
@@ -72,9 +87,19 @@ namespace NPMathHelper
 		return Vec2(lhs._x + value, lhs._y + value);
 	}
 
+	inline const Vec2 operator + (const float value, const Vec2& rhs)
+	{
+		return rhs + value;
+	}
+
 	inline const Vec2 operator - (const Vec2& lhs, const float value)
 	{
 		return Vec2(lhs._x - value, lhs._y - value);
+	}
+
+	inline const Vec2 operator - (const float value, const Vec2& rhs)
+	{
+		return rhs - value;
 	}
 
 	inline const Vec2 operator * (const Vec2& lhs, const float value)
@@ -82,9 +107,19 @@ namespace NPMathHelper
 		return Vec2(lhs._x * value, lhs._y * value);
 	}
 
+	inline const Vec2 operator * (const float value, const Vec2& rhs)
+	{
+		return rhs * value;
+	}
+
 	inline const Vec2 operator / (const Vec2& lhs, const float value)
 	{
 		return Vec2(lhs._x / value, lhs._y / value);
+	}
+
+	inline const Vec2 operator / (const float value, const Vec2& rhs)
+	{
+		return Vec2(value / rhs._x, value / rhs._y);
 	}
 
 	inline const Vec2 operator + (const Vec2& lhs, const Vec2& rhs)
@@ -149,6 +184,31 @@ namespace NPMathHelper
 
 		static Vec3 transform(const Mat4x4& mat4x4Left, const Vec3& v3Right, bool pos = true);
 
+		inline Vec3 cross(const Vec3& v3Other)
+		{
+			return cross(*this, v3Other);
+		}
+
+		inline float dot(const Vec3& v3Other)
+		{
+			return dot(*this, v3Other);
+		}
+
+		inline float length()
+		{
+			return length(*this);
+		}
+
+		inline Vec3 normalize()
+		{
+			return normalize(*this);
+		}
+
+		inline Vec3 transform(const Mat4x4& mat4Other, bool pos = true)
+		{
+			return transform(mat4Other, *this, pos);
+		}
+
 		inline const bool operator == (const Vec3& v3Other) const
 		{
 			return (_x == v3Other._x && _y == v3Other._y &&_z == v3Other._z);
@@ -165,9 +225,19 @@ namespace NPMathHelper
 		return Vec3(lhs._x + value, lhs._y + value, lhs._z + value);
 	}
 
+	inline const Vec3 operator + (const float value, const Vec3& rhs)
+	{
+		return rhs + value;
+	}
+
 	inline const Vec3 operator - (const Vec3& lhs, const float value)
 	{
 		return Vec3(lhs._x - value, lhs._y - value, lhs._z - value);
+	}
+
+	inline const Vec3 operator - (const float value, const Vec3& rhs)
+	{
+		return rhs - value;
 	}
 
 	inline const Vec3 operator * (const Vec3& lhs, const float value)
@@ -175,9 +245,19 @@ namespace NPMathHelper
 		return Vec3(lhs._x * value, lhs._y * value, lhs._z * value);
 	}
 
+	inline const Vec3 operator * (const float value, const Vec3& rhs)
+	{
+		return rhs * value;
+	}
+
 	inline const Vec3 operator / (const Vec3& lhs, const float value)
 	{
 		return Vec3(lhs._x / value, lhs._y / value, lhs._z / value);
+	}
+
+	inline const Vec3 operator / (const float value, const Vec3& rhs)
+	{
+		return Vec3(value / rhs._x, value / rhs._y, value / rhs._z);
 	}
 
 	inline const Vec3 operator + (const Vec3& lhs, const Vec3& rhs)
@@ -244,6 +324,26 @@ namespace NPMathHelper
 
 		static Vec4 transform(const Mat4x4& mat4x4Left, const Vec4& v4Right);
 
+		inline float dot(const Vec4& v4Other)
+		{
+			return dot(*this, v4Other);
+		}
+
+		inline float length()
+		{
+			return length(*this);
+		}
+
+		inline Vec4 normalize()
+		{
+			return normalize(*this);
+		}
+
+		inline Vec4 transform(const Mat4x4& mat4Other)
+		{
+			return transform(mat4Other, *this);
+		}
+
 		inline const bool operator == (const Vec4& v4Other) const
 		{
 			return (_x == v4Other._x && _y == v4Other._y &&_z == v4Other._z &&_w == v4Other._w);
@@ -260,9 +360,19 @@ namespace NPMathHelper
 		return Vec4(lhs._x + value, lhs._y + value, lhs._z + value, lhs._w + value);
 	}
 
+	inline const Vec4 operator + (const float value, const Vec4& rhs)
+	{
+		return rhs + value;
+	}
+
 	inline const Vec4 operator - (const Vec4& lhs, const float value)
 	{
 		return Vec4(lhs._x - value, lhs._y - value, lhs._z - value, lhs._w - value);
+	}
+
+	inline const Vec4 operator - (const float value, const Vec4& rhs)
+	{
+		return rhs - value;
 	}
 
 	inline const Vec4 operator * (const Vec4& lhs, const float value)
@@ -270,9 +380,19 @@ namespace NPMathHelper
 		return Vec4(lhs._x * value, lhs._y * value, lhs._z * value, lhs._w * value);
 	}
 
+	inline const Vec4 operator * (const float value, const Vec4& rhs)
+	{
+		return rhs * value;
+	}
+
 	inline const Vec4 operator * (const Mat4x4& lhs, const Vec4& rhs)
 	{
 		return Vec4::transform(lhs, rhs);
+	}
+
+	inline const Vec4 operator * (const Vec4& lhs, const Mat4x4& rhs)
+	{
+		return rhs * lhs;
 	}
 
 	inline const Vec4 operator / (const Vec4& lhs, const float value)
@@ -515,6 +635,24 @@ namespace NPMathHelper
 			fRight = temp;
 		}
 	};
+
+	inline const Mat4x4 operator + (const Mat4x4& lhs, const float value)
+	{
+		Mat4x4 result;
+		for (unsigned int i = 0; i < 16; i++)
+			result._e[i] = lhs._e[i] + value;
+		return result;
+	}
+
+	inline const Mat4x4 operator + (const float value, const Mat4x4& rhs)
+	{
+		return rhs + value;
+	}
+
+	inline const Mat4x4 operator * (const Mat4x4& lhs, const Mat4x4& rhs)
+	{
+		return Mat4x4::mul(lhs, rhs);
+	}
 }
 
 #endif
