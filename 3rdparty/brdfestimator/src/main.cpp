@@ -10,6 +10,24 @@ struct BatchConfig
 
 	bool load(const char* filename)
 	{
+		//std::ofstream output("config_batch_2.txt");
+		//for (int i = 0; i < 100; i++)
+		//{
+		//	float kd = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+		//	float ks = 1.f - kd;
+		//	float ns = 32.f;
+		//	if (static_cast <float> (rand()) / static_cast <float> (RAND_MAX) > 0.5f)
+		//		ns *= 0.5f;
+		//	std::stringstream name;
+		//	name << "test_" << i;
+
+		//	output << "batch " << name.str() << "\n" << 
+		//		"kd " << kd << " " << kd << " " << kd << "\n" <<
+		//		"ks " << ks << " " << ks << " " << ks << "\n" <<
+		//		"ns " << ns << "\n\n";
+		//}
+		//output.close();
+
 		std::ifstream input(filename, std::ios::in);
 		std::string param;
 

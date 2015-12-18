@@ -1,6 +1,6 @@
 scene_object_path						..\\obj\\
 //scene_object_filename					plane.obj
-scene_object_filename					test001.obj
+scene_object_filename					onion_gf_001.obj
 camera									0.000 0.000  100.000
 										0.000 0.000  0.00000 
 										40

@@ -2,6 +2,14 @@
 
 #include <Windows.h>
 
+#define USE_TBB
+
+#ifdef USE_TBB
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+#include <tbb/atomic.h>
+#endif
+
 
 /**
  * @fn void BRDFEstimator::init( void )
@@ -241,91 +249,114 @@ void BRDFEstimator::estimate(const int nsample, const Material* mat)
 	float startTime = (float)GetTickCount()/1000.f;
 
     //omega_i 
-	for (int i = 0; i < size; i++) {
-		//set light 
-		const int thidx = i / nph_;
-		const int phidx = i - thidx * nph_;
-#if 0
-		const float theta = ((float)thidx + 0.5f) / ( float ) nth_ * pi / 2.f;
-		const float phi = ((float)phidx + 0.5f) / (float)nph_ * 2.f * pi;
+#ifdef USE_TBB
+	tbb::atomic<int> finishedLoop;
+	finishedLoop = 0;
+	auto f = [&](const tbb::blocked_range< int >& range) {
+		for (int i = range.begin(); i < range.end(); i++) {
 #else
-		const float theta = thidx / (float)nth_ * pi / 2.f;
-		const float phi = phidx / (float)nph_ * 2.f * pi;
+		for (int i = 0; i < size; i++) {
 #endif
-		const float dth = 1.f / (float)nth_ * pi / 2.f;
-		const float dph = 1.f / (float)nph_ * 2.f * pi;
-		DirectionalLight light(theta, dth, phi, dph);
-
-		const float cosine = cosf(theta + dth / 2.f);
-
-		col3 eneCheck = col3(0.f, 0.f, 0.f);
-
-		//omega_o
-		for (int j = 0; j < size; j++) {
-			//calculate wo
-			const int thoidx = j / nph_;
-			const int phoidx = j - thoidx * nph_;
-			col3 fr;
-			int N = 0;
+			//set light 
+			const int thidx = i / nph_;
+			const int phidx = i - thidx * nph_;
 #if 0
-			N = 1;
-			const float tho = ((float)thoidx + 0.5f) / (float)nth_ * pi / 2.f;
-			const float pho = ((float)phoidx + 0.5f) / (float)nph_ * 2.f * pi;
-			vec3 wo;
-			wo.x = sinf( tho ) * cosf( pho );
-			wo.y = cosf( tho );
-			wo.z = sinf( tho ) * sinf( pho );
-			vec3 wi;
-			wi.x = sinf( theta ) * cosf( phi );
-			wi.y = cosf( theta );
-			wi.z = sinf( theta ) * sinf( phi );
-			vec3 halfVec = normalize(wo + wi);
-			float shininess = 25.f;
-			float energyConvervation = (8.0f + shininess) / (8.0 * M_PI);
-			fr = energyConvervation * pow(clamp(dot(vec3(0.f, 1.f, 0.f), halfVec), 0.f, 1.f), shininess);
+			const float theta = ((float)thidx + 0.5f) / ( float ) nth_ * pi / 2.f;
+			const float phi = ((float)phidx + 0.5f) / (float)nph_ * 2.f * pi;
 #else
-			for (int k = 0; k < nsample; k++) {
-				const float tho = (thoidx + rng_.getFloat()) / (float)nth_ * pi / 2.f;
-				const float pho = (phoidx + rng_.getFloat()) / (float)nph_ * 2.f * pi;
+			const float theta = thidx / (float)nth_ * pi / 2.f;
+			const float phi = phidx / (float)nph_ * 2.f * pi;
+#endif
+			const float dth = 1.f / (float)nth_ * pi / 2.f;
+			const float dph = 1.f / (float)nph_ * 2.f * pi;
+			DirectionalLight light(theta, dth, phi, dph);
+
+			const float cosine = cosf(theta + dth / 2.f);
+
+			col3 eneCheck = col3(0.f, 0.f, 0.f);
+
+			//omega_o
+			for (int j = 0; j < size; j++) {
+				//calculate wo
+				const int thoidx = j / nph_;
+				const int phoidx = j - thoidx * nph_;
+				col3 fr;
+				int N = 0;
+#if 0
+				N = 1;
+				const float tho = ((float)thoidx + 0.5f) / (float)nth_ * pi / 2.f;
+				const float pho = ((float)phoidx + 0.5f) / (float)nph_ * 2.f * pi;
 				vec3 wo;
-				wo.x = sinf(tho) * cosf(pho);
-				wo.y = cosf(tho);
-				wo.z = sinf(tho) * sinf(pho);
+				wo.x = sinf( tho ) * cosf( pho );
+				wo.y = cosf( tho );
+				wo.z = sinf( tho ) * sinf( pho );
+				vec3 wi;
+				wi.x = sinf( theta ) * cosf( phi );
+				wi.y = cosf( theta );
+				wi.z = sinf( theta ) * sinf( phi );
+				vec3 halfVec = normalize(wo + wi);
+				float shininess = 25.f;
+				float energyConvervation = (8.0f + shininess) / (8.0 * M_PI);
+				fr = energyConvervation * pow(clamp(dot(vec3(0.f, 1.f, 0.f), halfVec), 0.f, 1.f), shininess);
+#else
+				for (int k = 0; k < nsample; k++) {
+					const float tho = (thoidx + rng_.getFloat()) / (float)nth_ * pi / 2.f;
+					const float pho = (phoidx + rng_.getFloat()) / (float)nph_ * 2.f * pi;
+					vec3 wo;
+					wo.x = sinf(tho) * cosf(pho);
+					wo.y = cosf(tho);
+					wo.z = sinf(tho) * sinf(pho);
 
-				//generate ray by sampling a disk perpendicular to wo 
-				const vec3 disk = sampleConcentricDisc(rng_.getFloat(), rng_.getFloat());
-				Frame frame;
-				frame.set(wo);
-				Ray primary;
-				primary.o = center_ + radius_ * disk.x * frame.tangent() + radius_ * disk.y * frame.binormal() + radius_ * wo;
-				primary.d = -wo;
-				bool hit = false;
-				const col3 col = calculate_throughput(primary, light, hit, mat);
-				if (hit) {
-					fr += col;
-					N++;
+					//generate ray by sampling a disk perpendicular to wo 
+					const vec3 disk = sampleConcentricDisc(rng_.getFloat(), rng_.getFloat());
+					Frame frame;
+					frame.set(wo);
+					Ray primary;
+					primary.o = center_ + radius_ * disk.x * frame.tangent() + radius_ * disk.y * frame.binormal() + radius_ * wo;
+					primary.d = -wo;
+					bool hit = false;
+					const col3 col = calculate_throughput(primary, light, hit, mat);
+					if (hit) {
+						fr += col;
+						N++;
+					}
 				}
-			}
 #endif
-			fr /= (float)N;
-			eneCheck += fr;
-			fr /= (cosine * light.solid_angle()); //definition of BRDF f_r(\omega_i,\omega_o)= dL(x,\omega_o)/L(x,\omega_i)cos\theta_i d\omega_i 
-			fr_[i * size + j] = fr;
-			//std::cout << fr << "\n";
-		}
+				fr /= (float)N;
+				eneCheck += fr;
+				fr /= (cosine * light.solid_angle()); //definition of BRDF f_r(\omega_i,\omega_o)= dL(x,\omega_o)/L(x,\omega_i)cos\theta_i d\omega_i 
+				fr_[i * size + j] = fr;
+				//std::cout << fr << "\n";
+			}
 
-		if (eneCheck.r > 1.f || eneCheck.g > 1.f || eneCheck.b > 1.f)
-		{
-			isEnegyConserv = false;
-			std::cout << "[" << i << "/" << size << "]" << "Energy Conservation FAILED!! with " << eneCheck << std::endl;
+			if (eneCheck.r > 1.f || eneCheck.g > 1.f || eneCheck.b > 1.f)
+			{
+				isEnegyConserv = false;
+#ifndef USE_TBB
+				std::cout << "[" << i << "/" << size << "]" << "Energy Conservation FAILED!! with " << eneCheck << std::endl;
+#endif
+			}
+			else
+			{
+#ifndef USE_TBB
+				std::cout << "[" << i << "/" << size << "]" << "Energy Conservation OK with" << eneCheck << std::endl;
+#endif
+			}
+
+#ifdef USE_TBB
+			int curI = finishedLoop.fetch_and_increment();
+			float estRemTime = ((float)GetTickCount() / 1000.f - startTime) / (curI + 1) * (size - (curI + 1));
+			std::cout << "[" << (float)curI/(float)size*100.f << "%]" << "Estimate Remaining Time :" << (int)(estRemTime / 60.f / 60.f) << "Hrs" << (int)(estRemTime / 60.f) % 60 << "Mins" << (int)estRemTime % 60 << "Secs" << std::endl;
+#else
+			float estRemTime = ((float)GetTickCount() / 1000.f - startTime) / (i + 1) * (size - (i + 1));
+			std::cout << "Estimate Remaining Time :" << (int)(estRemTime / 60.f / 60.f) << "Hrs" << (int)(estRemTime / 60.f) % 60 << "Mins" << (int)estRemTime % 60 << "Secs" << std::endl;
+#endif
 		}
-		else
-		{
-			std::cout << "[" << i << "/" << size << "]" << "Energy Conservation OK with" << eneCheck << std::endl;
-		}
-		float estRemTime = ((float)GetTickCount()/1000.f - startTime) / (i + 1) * (size - (i + 1));
-		std::cout << "Estimate Remaining Time :" << (int)(estRemTime / 60.f / 60.f) << "Hrs" << (int)(estRemTime / 60.f) % 60 << "Mins" << (int)estRemTime % 60 << "Secs" << std::endl;
-    }
+#ifdef USE_TBB
+	};
+
+	tbb::parallel_for(tbb::blocked_range< int >(0, size), f);
+#endif
 	if (!isEnegyConserv)
 	{
 		std::cout << "[ERROR] Result >> Energy Conservation FAILED!!!" << std::endl;
